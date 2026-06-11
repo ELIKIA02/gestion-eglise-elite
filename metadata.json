@@ -1,0 +1,6 @@
+{
+  "name": "Gestion d'Église",
+  "description": "Une application complète de gestion d'église avec suivi financier, cultes et événements, communications, rapports et assistant pastoral IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

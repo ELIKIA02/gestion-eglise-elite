@@ -1,0 +1,11 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+wa_auth/
+scheduled-messages.json
+pinned-groups.json
