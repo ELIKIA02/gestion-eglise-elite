@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw } from 'lucide-react';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download } from 'lucide-react';
 
 interface ScheduledMessage {
   id: string;
@@ -82,6 +82,7 @@ const [waQR, setWaQR] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
 const [resetting, setResetting] = useState(false);
 const [qrVersion, setQrVersion] = useState(0);
+const [exportedAuth, setExportedAuth] = useState<string | null>(null);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Bump QR version when new QR arrives to force image refresh
@@ -116,6 +117,30 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
       }
     } catch {}
     setTimeout(() => setResetting(false), 3000);
+  };
+
+  const handleExportAuth = async () => {
+    try {
+      const res = await fetch('/api/whatsapp/export-auth');
+      const data = await res.json();
+      if (data.success) {
+        setExportedAuth(data.data);
+      } else {
+        alert("Aucune session WhatsApp à exporter. Connectez-vous d'abord.");
+      }
+    } catch {
+      alert("Erreur lors de l'export");
+    }
+  };
+
+  const copyAuthToClipboard = () => {
+    if (exportedAuth) {
+      navigator.clipboard.writeText(exportedAuth).then(() => {
+        alert("Données copiées ! Ajoutez-les comme WA_AUTH_DATA sur Render.");
+      }).catch(() => {
+        alert("Copie manuelle : sélectionnez et copiez le texte ci-dessous.");
+      });
+    }
   };
 
   useEffect(() => {
@@ -440,7 +465,13 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
       }`}>
         {statusIcon(waStatus)}
         <span className="font-medium flex-1">{statusLabel(waStatus)}</span>
-        {waStatus !== 'connected' && (
+        {waStatus === 'connected' ? (
+          <button onClick={handleExportAuth}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-emerald-300 text-emerald-800 font-semibold text-[10px] cursor-pointer">
+            <Download className="w-3 h-3" />
+            Exporter session
+          </button>
+        ) : (
           <button onClick={handleReset} disabled={resetting}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
             <Loader2 className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
@@ -463,6 +494,29 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
               Le QR apparaît aussi en ASCII dans les logs (scannez-le directement depuis le terminal).
             </p>
           </details>
+        </div>
+      )}
+
+      {exportedAuth && (
+        <div className="bg-white rounded-xl border border-emerald-200 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
+              <Download className="w-5 h-5" /> Session WhatsApp exportée
+            </div>
+            <button onClick={() => setExportedAuth(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-600">
+            Copiez cette chaîne et ajoutez-la comme variable d'environnement <strong>WA_AUTH_DATA</strong> sur Render.
+            Après redéploiement, WhatsApp sera automatiquement connecté.
+          </p>
+          <textarea readOnly value={exportedAuth} rows={4}
+            className="w-full text-[10px] p-2 border border-slate-200 rounded-md bg-slate-50 font-mono break-all" />
+          <button onClick={copyAuthToClipboard}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer">
+            Copier dans le presse-papier
+          </button>
         </div>
       )}
 

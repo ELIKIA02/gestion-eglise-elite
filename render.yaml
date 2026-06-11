@@ -9,5 +9,7 @@ services:
         value: 22
       - key: MISTRAL_API_KEY
         sync: false
+      - key: WA_AUTH_DATA
+        sync: false
       - key: API_PORT
         value: 3001

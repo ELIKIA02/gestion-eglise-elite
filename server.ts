@@ -4,7 +4,7 @@ import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
-import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64 } from "./whatsapp-client";
 
 dotenv.config();
 
@@ -382,6 +382,39 @@ async function startServer() {
       return res.status(404).json({ error: "Aucun QR disponible" });
     }
     res.json({ qr });
+  });
+
+  app.get("/api/whatsapp/export-auth", (_req, res) => {
+    const data = exportAuthAsBase64();
+    if (!data) {
+      return res.status(404).json({ error: "Aucune session WhatsApp trouvée" });
+    }
+    res.json({ success: true, data, hint: "Copiez ce data et ajoutez-le comme variable WA_AUTH_DATA sur Render" });
+  });
+
+  app.post("/api/whatsapp/import-auth", (req, res) => {
+    try {
+      const { data } = req.body;
+      if (!data) return res.status(400).json({ success: false, error: "Données manquantes" });
+      const ok = restoreAuthFromBase64(data);
+      if (ok) {
+        res.json({ success: true, message: "Session restaurée. Redémarrez WhatsApp." });
+      } else {
+        res.status(500).json({ success: false, error: "Échec de la restauration" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/reconnect", async (_req, res) => {
+    try {
+      cleanup();
+      await initWhatsApp();
+      res.json({ success: true, message: "Reconnexion en cours..." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   // Serve Frontend Assets (production only — dev uses Vite on port 5173)
