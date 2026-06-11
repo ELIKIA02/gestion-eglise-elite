@@ -16,6 +16,7 @@ import SettingsModule from './components/SettingsModule';
 import EnseignementModule from './components/EnseignementModule';
 import DocumentsModule from './components/DocumentsModule';
 import NotificationBell from './components/NotificationBell';
+import OnlineStatus from './components/OnlineStatus';
 
 import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, Trash2, BookOpen, FileText } from 'lucide-react';
 
@@ -338,6 +339,8 @@ export default function App() {
               theme={theme}
             />
           </div>
+
+          <OnlineStatus theme={theme} />
 
           <nav className="flex-col gap-1 flex">
             {NAV_LINKS.map(link => {

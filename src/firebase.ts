@@ -117,6 +117,15 @@ export function query(ref: CollectionRef): CollectionRef {
 
 export async function addDoc(ref: CollectionRef, data: any): Promise<{ id: string }> {
   const id = data.id || genId();
+  if (!navigator.onLine) {
+    queueOperation({ type: 'addDoc', collectionPath: ref.path, data: { ...data, id }, timestamp: Date.now() });
+    const docData = { ...data, id };
+    const docs = getCollectionData(ref.path);
+    docs.push(docData);
+    saveToCollection(ref.path, docs);
+    notifyListeners();
+    return { id };
+  }
   const docData = { ...data, id };
   const docs = getCollectionData(ref.path);
   docs.push(docData);
@@ -126,6 +135,9 @@ export async function addDoc(ref: CollectionRef, data: any): Promise<{ id: strin
 }
 
 export async function updateDoc(ref: DocumentRef, data: any): Promise<void> {
+  if (!navigator.onLine) {
+    queueOperation({ type: 'updateDoc', collectionPath: ref.collectionPath, docId: ref.id, data, timestamp: Date.now() });
+  }
   const docs = getCollectionData(ref.collectionPath);
   const idx = docs.findIndex((d: any) => d.id === ref.id);
   if (idx !== -1) {
@@ -136,6 +148,9 @@ export async function updateDoc(ref: DocumentRef, data: any): Promise<void> {
 }
 
 export async function setDoc(ref: DocumentRef, data: any): Promise<void> {
+  if (!navigator.onLine) {
+    queueOperation({ type: 'setDoc', collectionPath: ref.collectionPath, docId: ref.id, data, timestamp: Date.now() });
+  }
   const docs = getCollectionData(ref.collectionPath);
   const idx = docs.findIndex((d: any) => d.id === ref.id);
   if (idx !== -1) {
@@ -148,6 +163,9 @@ export async function setDoc(ref: DocumentRef, data: any): Promise<void> {
 }
 
 export async function deleteDoc(ref: DocumentRef): Promise<void> {
+  if (!navigator.onLine) {
+    queueOperation({ type: 'deleteDoc', collectionPath: ref.collectionPath, docId: ref.id, timestamp: Date.now() });
+  }
   const docs = getCollectionData(ref.collectionPath);
   const filtered = docs.filter((d: any) => d.id !== ref.id);
   saveToCollection(ref.collectionPath, filtered);
@@ -215,6 +233,67 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error(`[DB Error] ${operationType} on ${path}:`, error);
   throw error;
 }
+
+const PENDING_SYNC_KEY = 'church_pending_sync';
+
+interface PendingOperation {
+  type: 'addDoc' | 'updateDoc' | 'setDoc' | 'deleteDoc';
+  collectionPath: string;
+  data?: any;
+  docId?: string;
+  timestamp: number;
+}
+
+export function getOnlineStatus(): boolean {
+  return navigator.onLine;
+}
+
+export function getPendingSyncCount(): number {
+  try {
+    const raw = localStorage.getItem(PENDING_SYNC_KEY);
+    if (raw) return JSON.parse(raw).length;
+  } catch {}
+  return 0;
+}
+
+function queueOperation(op: PendingOperation) {
+  try {
+    const raw = localStorage.getItem(PENDING_SYNC_KEY);
+    const queue: PendingOperation[] = raw ? JSON.parse(raw) : [];
+    queue.push(op);
+    localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(queue));
+  } catch {}
+}
+
+async function replayQueue() {
+  try {
+    const raw = localStorage.getItem(PENDING_SYNC_KEY);
+    if (!raw) return;
+    const queue: PendingOperation[] = JSON.parse(raw);
+    if (queue.length === 0) return;
+
+    for (const op of queue) {
+      try {
+        if (op.type === 'addDoc') {
+          const ref: CollectionRef = { _type: 'collection', path: op.collectionPath };
+          await addDoc(ref, op.data);
+        } else if (op.type === 'updateDoc') {
+          const ref: DocumentRef = { _type: 'document', path: `${op.collectionPath}/${op.docId}`, collectionPath: op.collectionPath, id: op.docId! };
+          await updateDoc(ref, op.data);
+        } else if (op.type === 'setDoc') {
+          const ref: DocumentRef = { _type: 'document', path: `${op.collectionPath}/${op.docId}`, collectionPath: op.collectionPath, id: op.docId! };
+          await setDoc(ref, op.data);
+        } else if (op.type === 'deleteDoc') {
+          const ref: DocumentRef = { _type: 'document', path: `${op.collectionPath}/${op.docId}`, collectionPath: op.collectionPath, id: op.docId! };
+          await deleteDoc(ref);
+        }
+      } catch {}
+    }
+    localStorage.removeItem(PENDING_SYNC_KEY);
+  } catch {}
+}
+
+window.addEventListener('online', () => { replayQueue(); });
 
 export const db = {};
 export const auth = {

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { FinanceTransaction, ChurchEvent, Member, ChurchSettings } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import { FileDown, Printer, TrendingUp, Users, DollarSign, Calendar, Download, Filter } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { FileDown, Printer, TrendingUp, Users, DollarSign, Calendar, Download, Filter, BarChart3 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface ReportsModuleProps {
   transactions: FinanceTransaction[];
@@ -93,6 +94,84 @@ export default function ReportsModule({ transactions, events, members, settings 
       ministryData, statusData
     };
   }, [transactions, events, members, selectedYear]);
+
+  // Advanced Statistics
+  const advancedStats = useMemo(() => {
+    const memberGrowth: Record<string, number> = {};
+    members.forEach(m => {
+      const month = m.createdAt ? m.createdAt.substring(0, 7) : 'Inconnu';
+      memberGrowth[month] = (memberGrowth[month] || 0) + 1;
+    });
+    const memberGrowthData = Object.entries(memberGrowth).sort(([a], [b]) => a.localeCompare(b)).map(([month, count]) => ({
+      month,
+      count
+    }));
+
+    const balance = transactions.reduce((sum, t) =>
+      t.type === 'Revenu' ? sum + t.amount : sum - t.amount, 0
+    );
+    const totalRevenue = transactions.filter(t => t.type === 'Revenu').reduce((s, t) => s + t.amount, 0);
+    const totalExpenses = transactions.filter(t => t.type === 'Dépense').reduce((s, t) => s + t.amount, 0);
+
+    const eventTypeCount: Record<string, number> = {};
+    let totalAttendanceAll = 0;
+    events.forEach(e => {
+      eventTypeCount[e.type] = (eventTypeCount[e.type] || 0) + 1;
+      totalAttendanceAll += e.attendance || 0;
+    });
+    const avgAttendanceAll = events.length > 0 ? Math.round(totalAttendanceAll / events.length) : 0;
+    const mostPopularType = Object.entries(eventTypeCount).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
+
+    return { memberGrowthData, balance, totalRevenue, totalExpenses, avgAttendanceAll, mostPopularType, eventTypeCount };
+  }, [members, transactions, events]);
+
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+
+    const memberSheet = XLSX.utils.json_to_sheet(members.map(m => ({
+      Nom: m.name,
+      Email: m.email,
+      Téléphone: m.phone,
+      Statut: m.status,
+      Ministère: m.ministry,
+      Date_création: m.createdAt
+    })));
+    XLSX.utils.book_append_sheet(wb, memberSheet, 'Membres');
+
+    const financeSheet = XLSX.utils.json_to_sheet(transactions.map(t => ({
+      Date: t.date,
+      Type: t.type,
+      Catégorie: t.category,
+      Montant: t.amount,
+      Contributeur: t.contributor || '',
+      Notes: t.notes || ''
+    })));
+    XLSX.utils.book_append_sheet(wb, financeSheet, 'Finances');
+
+    const eventSheet = XLSX.utils.json_to_sheet(events.map(e => ({
+      Date: e.date,
+      Titre: e.title,
+      Type: e.type,
+      Participants: e.attendance,
+      Prédicateur: e.preacher,
+      Notes: e.notes
+    })));
+    XLSX.utils.book_append_sheet(wb, eventSheet, 'Événements');
+
+    const statsSheet = XLSX.utils.json_to_sheet([
+      { Indicateur: 'Total membres', Valeur: members.length },
+      { Indicateur: 'Membres actifs', Valeur: members.filter(m => m.status === 'Actif').length },
+      { Indicateur: 'Total revenus', Valeur: advancedStats.totalRevenue },
+      { Indicateur: 'Total dépenses', Valeur: advancedStats.totalExpenses },
+      { Indicateur: 'Solde', Valeur: advancedStats.balance },
+      { Indicateur: 'Total événements', Valeur: events.length },
+      { Indicateur: 'Assistance moyenne', Valeur: advancedStats.avgAttendanceAll },
+      { Indicateur: 'Type le plus fréquent', Valeur: advancedStats.mostPopularType },
+    ]);
+    XLSX.utils.book_append_sheet(wb, statsSheet, 'Statistiques');
+
+    XLSX.writeFile(wb, `rapport_eglise_${selectedYear}.xlsx`);
+  };
 
   // Exports
   const exportCSV = (type: 'finances' | 'members' | 'events') => {
@@ -254,15 +333,15 @@ export default function ReportsModule({ transactions, events, members, settings 
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Rapports & Statistiques</h2>
-          <p className="text-xs text-slate-500">Bilans annuels, graphiques et exports CSV</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Rapports & Statistiques</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Bilans annuels, graphiques et exports CSV</p>
         </div>
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-slate-400" />
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold"
+            className="text-xs border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 dark:text-slate-200 font-semibold"
           >
             {years.length > 0 ? years.map(y => (
               <option key={y} value={y}>{y}</option>
@@ -273,37 +352,37 @@ export default function ReportsModule({ transactions, events, members, settings 
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-emerald-600 text-[10px] font-bold uppercase tracking-wider mb-1">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-1">
             <DollarSign className="w-3.5 h-3.5" /> Recettes
           </div>
-          <span className="text-lg font-bold text-slate-900">{formatFCFA(reportStats.annualRevenue)}</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatFCFA(reportStats.annualRevenue)}</span>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-amber-600 text-[10px] font-bold uppercase tracking-wider mb-1">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider mb-1">
             <TrendingUp className="w-3.5 h-3.5" /> Dépenses
           </div>
-          <span className="text-lg font-bold text-slate-900">{formatFCFA(reportStats.annualExpense)}</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatFCFA(reportStats.annualExpense)}</span>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-indigo-600 text-[10px] font-bold uppercase tracking-wider mb-1">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-1">
             <Users className="w-3.5 h-3.5" /> Membres actifs
           </div>
-          <span className="text-lg font-bold text-slate-900">{reportStats.activeMembers}</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{reportStats.activeMembers}</span>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-amber-600 text-[10px] font-bold uppercase tracking-wider mb-1">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider mb-1">
             <Calendar className="w-3.5 h-3.5" /> Moy. assistance
           </div>
-          <span className="text-lg font-bold text-slate-900">{reportStats.avgAttendance} / culte</span>
+          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{reportStats.avgAttendance} / culte</span>
         </div>
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Monthly financial trends */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-4">Évolution financière mensuelle ({selectedYear})</h3>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Évolution financière mensuelle ({selectedYear})</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={reportStats.monthlyData}>
@@ -320,8 +399,8 @@ export default function ReportsModule({ transactions, events, members, settings 
         </div>
 
         {/* Ministry distribution */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-4">Répartition par ministère</h3>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Répartition par ministère</h3>
           {reportStats.ministryData.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-16">Aucun ministère renseigné</p>
           ) : (
@@ -350,8 +429,8 @@ export default function ReportsModule({ transactions, events, members, settings 
         </div>
 
         {/* Status distribution */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-4">Statut des membres</h3>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Statut des membres</h3>
           <div className="h-48 flex items-center gap-6">
             <div className="h-40 w-1/2">
               <ResponsiveContainer width="100%" height="100%">
@@ -377,35 +456,35 @@ export default function ReportsModule({ transactions, events, members, settings 
         </div>
 
         {/* Revenue composition */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-          <h3 className="text-sm font-bold text-slate-800 mb-4">Composition des revenus</h3>
-          <div className="space-y-4 text-xs">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">Composition des revenus</h3>
+            <div className="space-y-4 text-xs">
             <div>
               <div className="flex justify-between mb-1">
-                <span className="font-semibold">Dîmes</span>
-                <span>{formatFCFA(reportStats.tithesTotal)}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Dîmes</span>
+                <span className="text-slate-700 dark:text-slate-300">{formatFCFA(reportStats.tithesTotal)}</span>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
                 <div className="bg-indigo-600 h-full rounded-full transition-all"
                   style={{ width: `${Math.min(100, (reportStats.tithesTotal / (reportStats.annualRevenue || 1)) * 100)}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between mb-1">
-                <span className="font-semibold">Offrandes</span>
-                <span>{formatFCFA(reportStats.offeringsTotal)}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Offrandes</span>
+                <span className="text-slate-700 dark:text-slate-300">{formatFCFA(reportStats.offeringsTotal)}</span>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
                 <div className="bg-emerald-600 h-full rounded-full transition-all"
                   style={{ width: `${Math.min(100, (reportStats.offeringsTotal / (reportStats.annualRevenue || 1)) * 100)}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between mb-1">
-                <span className="font-semibold">Autres recettes</span>
-                <span>{formatFCFA(reportStats.annualRevenue - reportStats.tithesTotal - reportStats.offeringsTotal)}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Autres recettes</span>
+                <span className="text-slate-700 dark:text-slate-300">{formatFCFA(reportStats.annualRevenue - reportStats.tithesTotal - reportStats.offeringsTotal)}</span>
               </div>
-              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
                 <div className="bg-amber-500 h-full rounded-full transition-all"
                   style={{ width: `${Math.min(100, Math.max(0, (reportStats.annualRevenue - reportStats.tithesTotal - reportStats.offeringsTotal) / (reportStats.annualRevenue || 1)) * 100)}%` }} />
               </div>
@@ -415,61 +494,136 @@ export default function ReportsModule({ transactions, events, members, settings 
       </div>
 
       {/* Export cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <button onClick={() => exportCSV('finances')}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left">
-          <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-            <Download className="w-4 h-4 text-emerald-600" />
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all cursor-pointer text-left">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 block">Finances CSV</span>
-            <span className="text-[10px] text-slate-400">Écritures {selectedYear}</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Finances CSV</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Écritures {selectedYear}</span>
           </div>
         </button>
 
         <button onClick={() => exportCSV('members')}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left">
-          <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center shrink-0">
-            <Download className="w-4 h-4 text-sky-600" />
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all cursor-pointer text-left">
+          <div className="w-9 h-9 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center shrink-0">
+            <Download className="w-4 h-4 text-sky-600 dark:text-sky-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 block">Membres CSV</span>
-            <span className="text-[10px] text-slate-400">{members.length} inscrits</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Membres CSV</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">{members.length} inscrits</span>
           </div>
         </button>
 
         <button onClick={() => exportCSV('events')}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left">
-          <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-            <Download className="w-4 h-4 text-amber-600" />
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all cursor-pointer text-left">
+          <div className="w-9 h-9 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <Download className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 block">Événements CSV</span>
-            <span className="text-[10px] text-slate-400">{events.length} cultes</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Événements CSV</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">{events.length} cultes</span>
+          </div>
+        </button>
+
+        <button onClick={exportExcel}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+            <FileDown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Exporter vers Excel</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Classeur XLSX</span>
           </div>
         </button>
 
         <button onClick={exportPDF}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
-          <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-            <Download className="w-4 h-4 text-emerald-600" />
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 block">Exporter en PDF</span>
-            <span className="text-[10px] text-slate-400">Rapport {selectedYear}</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Exporter en PDF</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Rapport {selectedYear}</span>
           </div>
         </button>
 
         <button onClick={openPrintPreview}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
-          <div className="w-9 h-9 rounded-full bg-stone-50 flex items-center justify-center shrink-0">
-            <Printer className="w-4 h-4 text-stone-700" />
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
+          <div className="w-9 h-9 rounded-full bg-stone-50 dark:bg-stone-900/30 flex items-center justify-center shrink-0">
+            <Printer className="w-4 h-4 text-stone-700 dark:text-stone-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 block">Rapport papier</span>
-            <span className="text-[10px] text-slate-400">Bilan {selectedYear}</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Rapport papier</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Bilan {selectedYear}</span>
           </div>
         </button>
+      </div>
+
+      {/* Advanced Statistics */}
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          Statistiques Avancées
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Croissance des membres</h4>
+            {advancedStats.memberGrowthData.length > 0 ? (
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={advancedStats.memberGrowthData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" stroke="#64748b" fontSize={9} tickLine={false} />
+                    <YAxis stroke="#64748b" fontSize={9} tickLine={false} allowDecimals={false} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#4F46E5" strokeWidth={2} dot={{ r: 2 }} name="Nouveaux membres" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 dark:text-slate-500 py-8 text-center">Aucune donnée</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Résumé financier</h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Revenus totaux</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatFCFA(advancedStats.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Dépenses totales</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{formatFCFA(advancedStats.totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Solde</span>
+                <span className={`font-bold ${advancedStats.balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {formatFCFA(advancedStats.balance)}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Statistiques des événements</h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Total événements</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{events.length}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Assistance moyenne</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{advancedStats.avgAttendanceAll} / culte</span>
+              </div>
+              <div className="flex justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+                <span className="text-slate-600 dark:text-slate-400">Type le plus fréquent</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">{advancedStats.mostPopularType}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

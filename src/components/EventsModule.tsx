@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { collection, addDoc, deleteDoc, doc, db, handleFirestoreError, OperationType } from '../firebase';
 import { ChurchEvent, EventType, ChurchSettings } from '../types';
-import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, ClipboardList, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, ClipboardList, Trash2, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { generateGoogleCalendarUrl, generateOutlookCalendarUrl } from '../utils/calendar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface EventsModuleProps {
@@ -614,6 +615,20 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
               <div className="space-y-2">
                 {selectedDayEvents.map(evt => (
                   <div key={evt.id} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1">
+                      <a href={generateGoogleCalendarUrl({ title: evt.title, date: evt.date, time: evt.time, description: evt.notes })}
+                        target="_blank" rel="noopener noreferrer"
+                        className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500 transition-all"
+                        title="Google Calendar">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M7.4 2h9.2L20 5.6V22H4V5.6L7.4 2zm.6 2L5 6.5V20h14V6.5L16 4H8z"/><rect x="8" y="9" width="2" height="2" rx="1"/><rect x="11" y="9" width="2" height="2" rx="1"/><rect x="14" y="9" width="2" height="2" rx="1"/><rect x="8" y="12" width="2" height="2" rx="1"/><rect x="11" y="12" width="2" height="2" rx="1"/><rect x="14" y="12" width="2" height="2" rx="1"/><rect x="8" y="15" width="2" height="2" rx="1"/><rect x="11" y="15" width="2" height="2" rx="1"/></svg>
+                      </a>
+                      <a href={generateOutlookCalendarUrl({ title: evt.title, date: evt.date, time: evt.time, description: evt.notes })}
+                        target="_blank" rel="noopener noreferrer"
+                        className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 transition-all"
+                        title="Outlook">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h10v2H4v-2zm13 0h3v2h-3v-2z"/></svg>
+                      </a>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{evt.title}</span>
@@ -676,9 +691,29 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600">
-                      <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                      <span>{evt.attendance || 0} participants</span>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={generateGoogleCalendarUrl({ title: evt.title, date: evt.date, time: evt.time, description: evt.notes, location: evt.observations })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-all"
+                        title="Ajouter à Google Calendar"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M7.4 2h9.2L20 5.6V22H4V5.6L7.4 2zm.6 2L5 6.5V20h14V6.5L16 4H8z"/><rect x="8" y="9" width="2" height="2" rx="1"/><rect x="11" y="9" width="2" height="2" rx="1"/><rect x="14" y="9" width="2" height="2" rx="1"/><rect x="8" y="12" width="2" height="2" rx="1"/><rect x="11" y="12" width="2" height="2" rx="1"/><rect x="14" y="12" width="2" height="2" rx="1"/><rect x="8" y="15" width="2" height="2" rx="1"/><rect x="11" y="15" width="2" height="2" rx="1"/></svg>
+                      </a>
+                      <a
+                        href={generateOutlookCalendarUrl({ title: evt.title, date: evt.date, time: evt.time, description: evt.notes, location: evt.observations })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
+                        title="Ajouter à Outlook"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h10v2H4v-2zm13 0h3v2h-3v-2z"/></svg>
+                      </a>
+                      <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-600">
+                        <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                        <span>{evt.attendance || 0} participants</span>
+                      </div>
                     </div>
                   </div>
 

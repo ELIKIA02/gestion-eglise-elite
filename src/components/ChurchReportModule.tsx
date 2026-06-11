@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, Send, FileText, Download, Sparkles, TrendingUp, TrendingDown, Lightbulb, AlertTriangle, CheckCircle2, Target, BarChart3 } from 'lucide-react';
+import { Loader2, Send, FileText, Download, Sparkles, TrendingUp, TrendingDown, Lightbulb, AlertTriangle, CheckCircle2, Target, BarChart3, Printer } from 'lucide-react';
 import { ChurchSettings, Member, FinanceTransaction, ChurchEvent } from '../types';
 
 interface ChurchReportModuleProps {
