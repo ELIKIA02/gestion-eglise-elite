@@ -2,6 +2,37 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send } from 'lucide-react';
 import { Enseignement, EnseignementDay, Member } from '../types';
 
+function markdownToHtml(md: string): string {
+  if (!md) return '';
+  return md
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*_(.+?)_\*/g, '<b><i>$1</i></b>')
+    .replace(/_(.+?)_/g, '<i>$1</i>')
+    .replace(/\*(.+?)\*/g, '<b>$1</b>')
+    .replace(/~(.+?)~/g, '<s>$1</s>')
+    .replace(/\n/g, '<br>');
+}
+
+function htmlToMarkdown(html: string): string {
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?div>/gi, '\n')
+    .replace(/<\/?p>/gi, '\n')
+    .replace(/<\/?span[^>]*>/gi, '')
+    .replace(/<b><i>(.*?)<\/i><\/b>/gi, '*_$1_*')
+    .replace(/<i><b>(.*?)<\/b><\/i>/gi, '*_$1_*')
+    .replace(/<b>(.*?)<\/b>/gi, '*$1*')
+    .replace(/<i>(.*?)<\/i>/gi, '_$1_')
+    .replace(/<s>(.*?)<\/s>/gi, '~$1~')
+    .replace(/<code>(.*?)<\/code>/gi, '`$1`')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
+  return text.trim();
+}
+
 const STORAGE_KEY = 'church_enseignements';
 
 function loadAll(): Enseignement[] {
@@ -19,7 +50,6 @@ function genId(): string {
   return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// Try to import from PastoralAI series
 function importFromPastoralAI(): { days: { day: number; text: string }[]; theme: string } | null {
   try {
     const raw = localStorage.getItem('exhortation-saved-series');
@@ -50,9 +80,7 @@ export default function EnseignementModule({ settings, members, departments }: E
   const [saving, setSaving] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState('');
-  const textRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-import from PastoralAI on mount
   useEffect(() => {
     const imported = importFromPastoralAI();
     if (imported && enseignements.length === 0) {
@@ -122,6 +150,7 @@ export default function EnseignementModule({ settings, members, departments }: E
 
   const handleSave = () => {
     if (!editing) return;
+    syncWysiwyg();
     const updated: Enseignement = {
       ...editing,
       title: editTitle,
@@ -154,6 +183,7 @@ export default function EnseignementModule({ settings, members, departments }: E
 
   const handleSchedule = async () => {
     if (!editing || !scheduledAt) return;
+    syncWysiwyg();
     setScheduling(true);
     let success = 0;
     let failed = 0;
@@ -199,40 +229,17 @@ export default function EnseignementModule({ settings, members, departments }: E
     if (editingDayIndex >= editDays.length - 1) setEditingDayIndex(Math.max(0, editDays.length - 2));
   };
 
-  const formatText = (before: string, after: string) => {
-    const ta = textRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const current = editDays[editingDayIndex]?.text || '';
-    const selected = current.substring(start, end);
-    const newText = current.substring(0, start) + before + selected + after + current.substring(end);
-    const newDays = [...editDays];
-    newDays[editingDayIndex] = { ...newDays[editingDayIndex], text: newText };
-    setEditDays(newDays);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    });
+  const exec = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+    syncWysiwyg();
   };
 
-  const transformSelection = (transform: (t: string) => string) => {
-    const ta = textRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    if (start === end) return;
-    const current = editDays[editingDayIndex]?.text || '';
-    const selected = current.substring(start, end);
-    const transformed = transform(selected);
-    const newText = current.substring(0, start) + transformed + current.substring(end);
+  const syncWysiwyg = () => {
+    const el = document.getElementById(`wysiwyg-${editing?.id}`);
+    if (!el) return;
     const newDays = [...editDays];
-    newDays[editingDayIndex] = { ...newDays[editingDayIndex], text: newText };
+    newDays[editingDayIndex] = { ...newDays[editingDayIndex], text: htmlToMarkdown(el.innerHTML) };
     setEditDays(newDays);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start, start + transformed.length);
-    });
   };
 
   const copyDayText = (text: string) => {
@@ -243,6 +250,7 @@ export default function EnseignementModule({ settings, members, departments }: E
 
   if (view === 'edit' && editing) {
     const currentDay = editDays[editingDayIndex] || editDays[0];
+    const wysiwygId = `wysiwyg-${editing.id}`;
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -273,7 +281,7 @@ export default function EnseignementModule({ settings, members, departments }: E
             {editDays.length > 1 && (
               <div className="flex flex-wrap gap-1.5">
                 {editDays.map((d, i) => (
-                  <button key={i} onClick={() => setEditingDayIndex(i)}
+                  <button key={i} onClick={() => { syncWysiwyg(); setEditingDayIndex(i); }}
                     className={`text-[10px] px-2.5 py-1 rounded-full font-semibold cursor-pointer transition-all ${
                       editingDayIndex === i ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}>
@@ -284,7 +292,7 @@ export default function EnseignementModule({ settings, members, departments }: E
                     )}
                   </button>
                 ))}
-                <button onClick={addDay}
+                <button onClick={() => { syncWysiwyg(); addDay(); }}
                   className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer">
                   + Jour
                 </button>
@@ -302,34 +310,31 @@ export default function EnseignementModule({ settings, members, departments }: E
 
             {/* Formatting toolbar */}
             <div className="flex gap-1 pb-1">
-              <button type="button" onClick={() => formatText('*', '*')} title="Gras"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('bold'); }} title="Gras"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => formatText('_', '_')} title="Italique"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); }} title="Italique"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => formatText('*_', '_*')} title="Gras-italique"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); exec('bold'); }} title="Gras-italique"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Type className="w-3.5 h-3.5" /></button>
               <span className="w-px bg-slate-200 mx-0.5" />
-              <button type="button" onClick={() => transformSelection(t => t.toUpperCase())} title="Majuscule"
-                className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2">A<ArrowUp className="w-3 h-3 inline" /></button>
-              <button type="button" onClick={() => transformSelection(t => t.toLowerCase())} title="Minuscule"
-                className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer text-[10px] leading-none px-2">a<ArrowDown className="w-3 h-3 inline" /></button>
-              <span className="w-px bg-slate-200 mx-0.5" />
-              <button type="button" onClick={() => formatText('~', '~')} title="Barré"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('strikeThrough'); }} title="Barré"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => formatText('```', '```')} title="Monospace"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertHTML', '`' + window.getSelection()?.toString() + '`'); }} title="Monospace"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Code className="w-3.5 h-3.5" /></button>
               <div className="flex-1" />
               <button type="button" onClick={() => copyDayText(currentDay.text)} title="Copier"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Copy className="w-3.5 h-3.5" /></button>
             </div>
-            <textarea ref={textRef} value={currentDay.text} onChange={e => {
-              const newDays = [...editDays];
-              newDays[editingDayIndex] = { ...newDays[editingDayIndex], text: e.target.value };
-              setEditDays(newDays);
-            }}
-              rows={12}
-              placeholder="Écrivez le contenu..."
-              className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white font-sans leading-relaxed" />
+
+            {/* WYSIWYG editor */}
+            <div
+              id={wysiwygId}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={syncWysiwyg}
+              dangerouslySetInnerHTML={{ __html: markdownToHtml(currentDay.text) }}
+              className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white font-sans leading-relaxed min-h-[300px] [&_b]:font-bold [&_i]:italic [&_s]:line-through [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:rounded [&_code]:text-[10px]"
+            />
           </div>
 
           {/* Right: scheduling */}
