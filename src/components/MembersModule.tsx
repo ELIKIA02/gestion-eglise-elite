@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, db, handleFirestoreError, OperationType } from '../firebase';
 import { Member, MemberStatus, Department } from '../types';
-import { Search, UserPlus, Mail, Phone, Edit2, Trash2, Filter, Eye, X, Calendar, MapPin, Users, Award } from 'lucide-react';
+import { Search, UserPlus, Mail, Phone, Edit2, Trash2, Filter, Eye, X, Calendar, MapPin, Users, Award, List, Grid3x3, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface MembersModuleProps {
   members: Member[];
@@ -42,6 +42,12 @@ export default function MembersModule({ members, departments, loading, onRefresh
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [ministryFilter, setMinistryFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
+
+  // Reset page on filter change
+  useEffect(() => { setPage(1); }, [searchTerm, statusFilter, ministryFilter]);
 
   // Form State
   const [isAdding, setIsAdding] = useState(false);
@@ -370,8 +376,105 @@ export default function MembersModule({ members, departments, loading, onRefresh
         </div>
       </div>
 
+      {/* View toggle + result count */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{filteredMembers.length} membre(s)</span>
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5 border border-slate-200 dark:border-slate-600">
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all ${
+              viewMode === 'cards'
+                ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <Grid3x3 className="w-3.5 h-3.5" /> Cartes
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all ${
+              viewMode === 'table'
+                ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-300 shadow-xs'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" /> Tableau
+          </button>
+        </div>
+      </div>
+
+      {/* Vue Tableau compact avec pagination */}
+      {viewMode === 'table' && !loading && filteredMembers.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Nom</th>
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] hidden md:table-cell">Email</th>
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] hidden lg:table-cell">Téléphone</th>
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Statut</th>
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] hidden lg:table-cell">Ministère</th>
+                  <th className="text-left px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] hidden xl:table-cell">Groupe</th>
+                  <th className="text-right px-3 py-2 font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMembers.slice((page - 1) * pageSize, page * pageSize).map((member, idx) => (
+                  <tr key={member.id} className={`border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/30 dark:bg-slate-800/50'}`}>
+                    <td className="px-3 py-2 font-semibold text-slate-800 dark:text-slate-200 whitespace-nowrap">{member.name}</td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 hidden md:table-cell truncate max-w-[180px]">{member.email || '—'}</td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 hidden lg:table-cell">{member.phone || '—'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        member.status === 'Actif' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                        member.status === 'Inactif' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                        'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300'
+                      }`}>{member.status}</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 hidden lg:table-cell truncate max-w-[140px]">{member.ministry}</td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400 hidden xl:table-cell">{member.group && member.group !== 'Aucun' ? member.group : '—'}</td>
+                    <td className="px-3 py-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => setViewingMember(member)} className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 cursor-pointer" title="Voir"><Eye className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => startEdit(member)} className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-400 dark:text-slate-500 cursor-pointer" title="Modifier"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => member.id && handleDelete(member.id)} className="p-1 hover:text-rose-600 dark:hover:text-rose-400 text-slate-400 dark:text-slate-500 cursor-pointer" title="Supprimer"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Pagination */}
+          {filteredMembers.length > pageSize && (
+            <div className="flex items-center justify-between px-3 py-2 border-t border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/30">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredMembers.length)} sur {filteredMembers.length}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setPage(p => (p * pageSize < filteredMembers.length ? p + 1 : p))}
+                  disabled={page * pageSize >= filteredMembers.length}
+                  className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Grid of member cards */}
-      {loading ? (
+      {viewMode === 'cards' && (loading ? (
         <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm font-medium animate-pulse">Chargement du registre...</div>
       ) : filteredMembers.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 text-center py-12 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
@@ -452,7 +555,7 @@ export default function MembersModule({ members, departments, loading, onRefresh
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Member Details Modal */}
       {viewingMember && (
