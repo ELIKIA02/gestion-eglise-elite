@@ -58,8 +58,8 @@ export default function App() {
       snapshot.forEach(doc => { current = { id: doc.id, ...doc.data() } as ChurchSettings; });
       if (!current) {
         setSettings({
-          appName: "Gestion d'Église Élite",
-          appLogo: "†",
+          appName: "ELIKIA EKLESIA",
+          appLogo: "⛪",
           churchPhone: '',
           worshipTypes: "Prédication, École du dimanche, Jeûne, Séminaire, Culte régulier, Autre",
           worshipDays: "Dimanche, Mercredi",
@@ -301,7 +301,7 @@ export default function App() {
               <img src={settings.appLogo} alt="Logo" className="w-7 h-7 rounded-md object-contain bg-white border border-slate-600 shrink-0" />
             ) : (
               <span className="w-7 h-7 rounded-md bg-indigo-600 text-indigo-100 font-semibold flex items-center justify-center border border-indigo-500 text-sm shadow-xs shrink-0">
-                {settings?.appLogo || "†"}
+                {settings?.appLogo || "⛪"}
               </span>
             )}
             <span className="font-bold text-xs text-slate-100 truncate">{settings?.appName || "Ma Paroisse"}</span>
@@ -324,7 +324,7 @@ export default function App() {
                   <img src={settings.appLogo} alt="Logo" className="w-7 h-7 rounded-md object-contain bg-white border border-slate-600" />
                 ) : (
                   <span className="w-7 h-7 rounded-md bg-indigo-600 text-indigo-100 font-semibold flex items-center justify-center border border-indigo-500 text-sm shadow-xs">
-                    {settings?.appLogo || "†"}
+                    {settings?.appLogo || "⛪"}
                   </span>
                 )}
               <div className="min-w-0">
@@ -427,7 +427,7 @@ export default function App() {
         <footer className={`text-center text-[10px] font-medium py-3 border-t transition-colors duration-300 ${
           theme === 'dark' ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-200/60'
         }`}>
-          © {new Date().getFullYear()} {settings?.appName || "Gestion d'Église Élite"} • Données stockées localement.
+          © {new Date().getFullYear()} {settings?.appName || "ELIKIA EKLESIA"} • Données stockées localement.
         </footer>
       </main>
 

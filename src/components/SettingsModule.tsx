@@ -67,8 +67,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   // Sync state with props
   useEffect(() => {
     if (settings) {
-      setAppName(settings.appName || "Gestion d'Église Élite");
-      setAppLogo(settings.appLogo || "†");
+      setAppName(settings.appName || "ELIKIA EKLESIA");
+      setAppLogo(settings.appLogo || "⛪");
       setChurchPhone(settings.churchPhone || '');
       setWorshipTypes(settings.worshipTypes || "Prédication, École du dimanche, Jeûne, Séminaire, Culte régulier, Autre");
       setWorshipDays(settings.worshipDays || "Dimanche, Mercredi");
@@ -138,8 +138,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
 
   const handleResetDefault = () => {
     if (window.confirm("Voulez-vous restaurer les paramètres par défaut ?")) {
-      setAppName("Gestion d'Église Élite");
-      setAppLogo("†");
+      setAppName("ELIKIA EKLESIA");
+      setAppLogo("⛪");
       setChurchPhone('');
       setWorshipTypes("Prédication, École du dimanche, Jeûne, Séminaire, Culte régulier, Autre");
       setWorshipDays("Dimanche, Mercredi");
@@ -529,7 +529,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                   </span>
                 )}
                 <span className="font-sans font-bold text-xs tracking-tight text-slate-900">
-                  {appName || "Gestion d'Église Élite"}
+                  {appName || "ELIKIA EKLESIA"}
                 </span>
               </div>
 

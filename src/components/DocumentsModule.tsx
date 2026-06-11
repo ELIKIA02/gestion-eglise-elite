@@ -181,8 +181,8 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   };
 
   const renderDocument = () => {
-    const appName = settings?.appName || "Gestion d'Église Élite";
-    const logo = settings?.appLogo || '†';
+    const appName = settings?.appName || "ELIKIA EKLESIA";
+    const logo = settings?.appLogo || '⛪';
     const header = settings?.reportHeader || appName;
     const isImage = logo.startsWith('data:image');
 

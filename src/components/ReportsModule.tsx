@@ -232,7 +232,7 @@ export default function ReportsModule({ transactions, events, members, settings 
 </style></head><body>
 <div class="header">
   <div style="font-size: 22px; font-weight: bold; color: #800020;">
-    ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;" />` : (settings?.appLogo || '†')} ${settings?.appName || 'Gestion d\'Église Élite'}
+     ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;" />` : (settings?.appLogo || '⛪')} ${settings?.appName || 'ELIKIA EKLESIA'}
   </div>
   <div style="font-size: 11px; color: #4a5568; white-space: pre-wrap;">${settings?.reportHeader || 'Rapport paroissial'}</div>
 </div>
@@ -302,7 +302,7 @@ export default function ReportsModule({ transactions, events, members, settings 
       </style></head><body>
       <div class="header">
         <div style="font-size: 22px; font-weight: bold; color: #800020;">
-          ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;" />` : (settings?.appLogo || '†')} ${settings?.appName || 'Gestion d\'Église Élite'}
+    ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;" />` : (settings?.appLogo || '⛪')} ${settings?.appName || 'ELIKIA EKLESIA'}
         </div>
         <div style="font-size: 11px; color: #4a5568; white-space: pre-wrap;">${settings?.reportHeader || 'Rapport paroissial'}</div>
       </div>

@@ -302,10 +302,10 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
     if (!response) return;
     const title = `Audit_Église_${settings?.appName || 'Ma_Paroisse'}`;
     const content = mdToHtmlWord(response);
-    const churchName = settings?.appName || "Gestion d'Église Élite";
+    const churchName = settings?.appName || "ELIKIA EKLESIA";
     const logo = settings?.appLogo?.startsWith('data:image')
       ? `<img src="${settings.appLogo}" alt="Logo" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;margin-bottom:4px;" />`
-      : (settings?.appLogo || '†');
+      : (settings?.appLogo || '⛪');
     const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const html = `<!DOCTYPE html>
 <html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -582,8 +582,8 @@ ${content}
     if (!response) return;
     const logo = settings?.appLogo?.startsWith('data:image')
       ? `<img src="${settings.appLogo}" alt="Logo" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;margin-bottom:4px;" />`
-      : (settings?.appLogo || '†');
-    const name = settings?.appName || "Gestion d'Église Élite";
+      : (settings?.appLogo || '⛪');
+    const name = settings?.appName || "ELIKIA EKLESIA";
     const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const content = mdToHtmlWord(response);
 

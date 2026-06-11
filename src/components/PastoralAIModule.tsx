@@ -367,8 +367,8 @@ export default function PastoralAIModule({ settings, members, transactions, even
   blockquote { border-left: 3px solid #4f46e5; padding-left: 10px; color: #475569; margin: 10px 0; }
 </style></head><body>
 <div class="header">
-  <div class="logo">${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;" />` : (settings?.appLogo || '†')}</div>
-  <div style="font-size:16pt;font-weight:bold;">${settings?.appName || "Gestion d'Église Élite"}</div>
+  <div class="logo">${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;" />` : (settings?.appLogo || '⛪')}</div>
+  <div style="font-size:16pt;font-weight:bold;">${settings?.appName || "ELIKIA EKLESIA"}</div>
   <div class="sub">${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
 </div>
 ${response
@@ -413,10 +413,10 @@ ${response
       .replace(/\n\n/g, '</p><p style="margin:8px 0;">')
       .replace(/\n/g, '<br/>');
 
-    const churchName = settings?.appName || "Gestion d'Église Élite";
+    const churchName = settings?.appName || "ELIKIA EKLESIA";
     const logo = settings?.appLogo?.startsWith('data:image')
       ? `<img src="${settings.appLogo}" alt="Logo" style="width:50px;height:50px;object-fit:contain;vertical-align:middle;margin-bottom:4px;" />`
-      : (settings?.appLogo || '†');
+      : (settings?.appLogo || '⛪');
     const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     printWindow.document.write(`<!DOCTYPE html>
