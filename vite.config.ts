@@ -12,6 +12,9 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1600,
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: {
