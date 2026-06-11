@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, db } from './firebase';
+import { collection, onSnapshot, query, db, loadFromServer } from './firebase';
 import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department } from './types';
 
 import ErrorBoundary from './components/ErrorBoundary';
@@ -44,6 +44,7 @@ export default function App() {
 
   // Real-time data sync via localStorage
   useEffect(() => {
+    loadFromServer().catch(() => {});
     const qSettings = query(collection(db, 'church_settings'));
     const unsubSettings = onSnapshot(qSettings, (snapshot) => {
       let current: ChurchSettings | null = null;

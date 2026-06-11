@@ -417,6 +417,34 @@ async function startServer() {
     }
   });
 
+  // Data persistence (sync from browser localStorage)
+  const DATA_FILE = path.join(process.cwd(), 'app-data.json');
+
+  app.post("/api/data/save", (req, res) => {
+    try {
+      const data = req.body;
+      if (!data || typeof data !== 'object') {
+        return res.status(400).json({ success: false, error: "Données invalides" });
+      }
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/data/load", (_req, res) => {
+    try {
+      if (fs.existsSync(DATA_FILE)) {
+        const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        return res.json({ success: true, data });
+      }
+      res.json({ success: true, data: null });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Serve Frontend Assets (production only — dev uses Vite on port 5173)
   if (!isDev) {
     const distPath = path.join(process.cwd(), "dist");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, setDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { ChurchSettings } from '../types';
-import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2 } from 'lucide-react';
+import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2, Download, UploadCloud } from 'lucide-react';
 
 interface SettingsModuleProps {
   settings: ChurchSettings | null;
@@ -414,6 +414,64 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           </div>
         </div>
       </form>
+
+      {/* Export / Import des données */}
+      <div className="border-t border-slate-200 pt-6 mt-8">
+        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4">
+          <Download className="w-4 h-4 text-emerald-600" />
+          Sauvegarde & Transfert des Données
+        </h3>
+        <p className="text-[11px] text-slate-500 mb-4">
+          Exportez toutes les données pour les transférer sur une autre machine, ou importez une sauvegarde existante.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const raw = localStorage.getItem('church_db_data');
+              if (!raw) { alert('Aucune donnée à exporter.'); return; }
+              const blob = new Blob([raw], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `eglise-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-emerald-500"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exporter les données
+          </button>
+
+          <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-indigo-500">
+            <UploadCloud className="w-3.5 h-3.5" />
+            Importer une sauvegarde
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                  try {
+                    const data = JSON.parse(ev.target?.result as string);
+                    if (typeof data !== 'object') throw new Error('Format invalide');
+                    localStorage.setItem('church_db_data', JSON.stringify(data));
+                    alert('Données importées avec succès ! La page va se recharger.');
+                    window.location.reload();
+                  } catch {
+                    alert('Fichier invalide. Veuillez sélectionner un fichier JSON exporté depuis cette application.');
+                  }
+                };
+                reader.readAsText(file);
+              }}
+            />
+          </label>
+        </div>
+      </div>
     </div>
   );
 }

@@ -19,6 +19,37 @@ interface CollectionRef { _type: 'collection'; path: string }
 interface DocumentRef { _type: 'document'; path: string; collectionPath: string; id: string }
 type DbRef = CollectionRef | DocumentRef;
 
+function getApiBase(): string {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
+  }
+  return '';
+}
+
+let syncTimer: any = null;
+function syncToServer(data: Record<string, any[]>) {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    fetch(`${getApiBase()}/api/data/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => {});
+  }, 500);
+}
+
+export async function loadFromServer(): Promise<boolean> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/data/load`);
+    const json = await res.json();
+    if (json.success && json.data) {
+      localStorage.setItem(DB_KEY, JSON.stringify(json.data));
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
 function loadAll(): Record<string, any[]> {
   try {
     const raw = localStorage.getItem(DB_KEY);
@@ -29,6 +60,7 @@ function loadAll(): Record<string, any[]> {
 
 function saveAll(data: Record<string, any[]>) {
   localStorage.setItem(DB_KEY, JSON.stringify(data));
+  syncToServer(data);
 }
 
 function getCollectionData(name: string): any[] {

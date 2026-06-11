@@ -9,3 +9,4 @@ coverage/
 wa_auth/
 scheduled-messages.json
 pinned-groups.json
+app-data.json
