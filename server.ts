@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
+import QRCode from "qrcode";
 import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp } from "./whatsapp-client";
 
 dotenv.config();
@@ -354,6 +355,33 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
+  });
+
+  app.get("/api/whatsapp/qr-image", async (_req, res) => {
+    try {
+      const qr = getQR();
+      if (!qr) {
+        return res.status(404).json({ error: "Aucun QR disponible" });
+      }
+      const qrDataUrl = await QRCode.toDataURL(qr, { width: 280, margin: 2 });
+      const base64 = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+      const buf = Buffer.from(base64, 'base64');
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': buf.length,
+      });
+      res.end(buf);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/whatsapp/qr-text", (_req, res) => {
+    const qr = getQR();
+    if (!qr) {
+      return res.status(404).json({ error: "Aucun QR disponible" });
+    }
+    res.json({ qr });
   });
 
   // Serve Frontend Assets (production only — dev uses Vite on port 5173)

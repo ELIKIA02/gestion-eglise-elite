@@ -18,12 +18,16 @@ function getReconnectDelay(): number {
 
 export async function initWhatsApp() {
   const authDir = path.join(process.cwd(), 'wa_auth');
+  console.log('[WA] Initializing WhatsApp...');
   if (!fs.existsSync(authDir)) {
+    console.log('[WA] Auth directory does not exist, creating');
     fs.mkdirSync(authDir, { recursive: true });
   }
 
   try {
+    console.log('[WA] Loading auth state...');
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    console.log('[WA] Auth state loaded, creating socket...');
 
     sock = makeWASocket({
       auth: state,
@@ -38,19 +42,25 @@ export async function initWhatsApp() {
       if (qr) {
         currentQR = qr;
         reconnectAttempt = 0;
+        console.log('[WA] QR code generated (first 50 chars):', qr.substring(0, 50) + '...');
       }
-      if (connection === 'connecting') { status = 'connecting'; }
+      if (connection === 'connecting') {
+        status = 'connecting';
+        console.log('[WA] Status: connecting');
+      }
       if (connection === 'open') {
         status = 'connected';
         currentQR = null;
         reconnectAttempt = 0;
-        // Fetch groups after a delay to let sync complete
+        console.log('[WA] Status: connected');
         setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
       }
       if (connection === 'close') {
         const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const isLoggedOut = error === DisconnectReason.loggedOut;
         const isRestartRequired = error === DisconnectReason.restartRequired;
+        const reason = isLoggedOut ? 'logged-out' : isRestartRequired ? 'restart-required' : error || 'unknown';
+        console.log('[WA] Status: disconnected, reason:', reason);
         status = 'disconnected';
         currentQR = null;
 
@@ -62,13 +72,16 @@ export async function initWhatsApp() {
         if (!isLoggedOut || isRestartRequired) {
           reconnectAttempt++;
           const delay = getReconnectDelay();
+          console.log(`[WA] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
           setTimeout(() => initWhatsApp(), delay);
         }
       }
     });
 
     sock.ev.on('creds.update', saveCreds);
+    console.log('[WA] Socket created, waiting for connection...');
   } catch (err) {
+    console.error('[WA] Init error:', err);
     reconnectAttempt++;
     const delay = getReconnectDelay();
     setTimeout(() => initWhatsApp(), delay);

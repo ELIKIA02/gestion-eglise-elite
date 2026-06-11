@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff } from 'lucide-react';
-import QRCode from 'qrcode';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw } from 'lucide-react';
 
 interface ScheduledMessage {
   id: string;
@@ -80,19 +79,15 @@ export default function CommunicationsModule({ comms, members, departments, sett
 
 const [waStatus, setWaStatus] = useState<string>('checking');
 const [waQR, setWaQR] = useState<string | null>(null);
-const [qrImage, setQrImage] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
 const [resetting, setResetting] = useState(false);
+const [qrVersion, setQrVersion] = useState(0);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Generate QR image from raw QR string
+  // Bump QR version when new QR arrives to force image refresh
   useEffect(() => {
     if (waQR) {
-      QRCode.toDataURL(waQR, { width: 280, margin: 2, color: { dark: '#1e293b', light: '#ffffff' } })
-        .then(url => setQrImage(url))
-        .catch(() => setQrImage(null));
-    } else {
-      setQrImage(null);
+      setQrVersion(v => v + 1);
     }
   }, [waQR]);
 
@@ -454,13 +449,20 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
         )}
       </div>
 
-      {qrImage && (
+      {waQR && (
         <div className="bg-white rounded-xl border border-amber-200 p-5 flex flex-col items-center gap-3">
           <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
             <QrCode className="w-5 h-5" /> Scannez ce QR code avec WhatsApp
           </div>
-          <img src={qrImage} alt="QR Code WhatsApp" className="border-2 border-slate-100 rounded-lg" />
+          <img key={qrVersion} src={`/api/whatsapp/qr-image?t=${Date.now()}`} alt="QR Code WhatsApp" onError={() => {}} className="border-2 border-slate-100 rounded-lg" />
           <p className="text-[10px] text-slate-400">WhatsApp → Paramètres → Appareils connectés → Connecter un appareil</p>
+          <details className="w-full">
+            <summary className="text-[10px] text-slate-400 cursor-pointer hover:text-slate-600 text-center">QR pas visible ? Voir dans les logs Render</summary>
+            <p className="text-[10px] text-slate-400 mt-2 text-center">
+              Ouvrez les <strong>Logs</strong> de votre service Render, cherchez <code className="bg-slate-100 px-1 rounded">[WA] QR code generated</code>.<br />
+              Le QR apparaît aussi en ASCII dans les logs (scannez-le directement depuis le terminal).
+            </p>
+          </details>
         </div>
       )}
 
