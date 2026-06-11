@@ -241,10 +241,7 @@ export default function PastoralAIModule({ settings, members, transactions, even
       effectivePrompt += toneMap[smsTone];
     }
     if (action === 'exhortation' && seriesMode) {
-      effectivePrompt = `Génère une série de ${numberOfDays} exhortations quotidiennes sur le thème suivant : "${promptInput}". 
-Chaque jour doit être marqué par un titre "## Jour N" suivi du texte du jour. 
-La série doit suivre une progression logique : commence par poser le fondement, puis développe, et termine par une conclusion forte.
-Très peu d'émojis. Utilise le formatage WhatsApp (*gras*, _italique_, ~barré~, \`code\`).`;
+      effectivePrompt = promptInput;
       setParsedDays([]);
       clearSavedSeries();
       setSavedSeriesInfo('');
@@ -303,8 +300,8 @@ Très peu d'émojis. Utilise le formatage WhatsApp (*gras*, _italique_, ~barré~
       if (!fullText) {
         setResponse("### ⚠️ Aucun contenu généré. Vérifie ta clé API Mistral dans Paramètres.");
       } else if (action === 'exhortation' && seriesMode) {
-        const dayRegex = /##\s*Jour\s*(\d+)/gi;
-        const parts = fullText.split(/(?=##\s*Jour\s*\d+)/gi);
+        const dayRegex = /(?:\*|##)\s*Jour\s*(\d+)\s*[—–-]?\s*/gi;
+        const parts = fullText.split(/(?=(?:\*|##)\s*Jour\s*\d+\s*[—–-]?\s*)/gi);
         const days: { day: number; text: string }[] = [];
         for (const part of parts) {
           const match = part.match(dayRegex);
