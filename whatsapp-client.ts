@@ -1,6 +1,7 @@
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as zlib from 'zlib';
 
 // Dynamic import for ESM-only baileys (incompatible with esbuild CJS output)
 let baileys: any = null;
@@ -38,7 +39,9 @@ export function exportAuthAsBase64(): string | null {
         files[entry.name] = fs.readFileSync(filePath, 'base64');
       }
     }
-    return Buffer.from(JSON.stringify(files)).toString('base64');
+    const json = JSON.stringify(files);
+    const compressed = zlib.gzipSync(Buffer.from(json, 'utf-8'));
+    return compressed.toString('base64');
   } catch { return null; }
 }
 
@@ -46,7 +49,15 @@ export function restoreAuthFromBase64(data: string): boolean {
   try {
     const authDir = getAuthDir();
     if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
-    const files: Record<string, string> = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
+    const raw = Buffer.from(data, 'base64');
+    // Try gzip first, fall back to raw JSON (backward compat)
+    let json: string;
+    if (raw[0] === 0x1f && raw[1] === 0x8b) {
+      json = zlib.gunzipSync(raw).toString('utf-8');
+    } else {
+      json = raw.toString('utf-8');
+    }
+    const files: Record<string, string> = JSON.parse(json);
     for (const [name, content] of Object.entries(files)) {
       fs.writeFileSync(path.join(authDir, name), Buffer.from(content, 'base64'));
     }
