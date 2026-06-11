@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send } from 'lucide-react';
+import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send, FileDown } from 'lucide-react';
 import { Enseignement, EnseignementDay, Member } from '../types';
 
 function markdownToHtml(md: string): string {
@@ -276,6 +276,50 @@ export default function EnseignementModule({ settings, members, departments }: E
     setTimeout(() => setMsg(''), 2000);
   };
 
+  const exportWord = () => {
+    if (!editing) return;
+    const title = editTitle || 'Enseignement';
+    const daysHtml = editDays.map(d => `
+      <div style="margin-bottom: 24px; page-break-inside: avoid;">
+        <h2 style="color: #4f46e5; font-size: 16pt; font-family: 'Calibri', Arial, sans-serif; margin-bottom: 8px; border-bottom: 2px solid #4f46e5; padding-bottom: 4px;">${d.title}</h2>
+        <div style="font-size: 11pt; font-family: 'Calibri', Arial, sans-serif; line-height: 1.6; color: #1e293b;">
+          ${markdownToHtml(d.text).replace(/<br>/g, '<br>')}
+        </div>
+      </div>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset="utf-8"><title>${title}</title>
+<style>
+  body { font-family: 'Calibri', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; margin: 40px; }
+  h1 { color: #4f46e5; font-size: 18pt; border-bottom: 3px double #4f46e5; padding-bottom: 6px; }
+  h2 { color: #4f46e5; font-size: 14pt; margin-top: 20px; }
+  b, strong { font-weight: bold; }
+  i, em { font-style: italic; }
+  s { text-decoration: line-through; }
+  code { background-color: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 10pt; font-family: 'Courier New', monospace; }
+</style></head>
+<body>
+  <div style="text-align: center; border-bottom: 3px double #4f46e5; padding-bottom: 10px; margin-bottom: 20px;">
+    <div style="font-size: 20pt; font-weight: bold; color: #4f46e5;">${title}</div>
+    ${editTheme ? `<div style="font-size: 10pt; color: #64748b; margin-top: 4px;">${editTheme}</div>` : ''}
+    <div style="font-size: 9pt; color: #94a3b8; margin-top: 4px;">${editDays.length} jour${editDays.length > 1 ? 's' : ''} · ${new Date().toLocaleDateString('fr-FR')}</div>
+  </div>
+  ${daysHtml}
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-z0-9]/gi, '_')}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (view === 'edit' && editing) {
     const currentDay = editDays[editingDayIndex] || editDays[0];
     const wysiwygId = `wysiwyg-${editing.id}`;
@@ -287,6 +331,10 @@ export default function EnseignementModule({ settings, members, departments }: E
           </button>
           <div className="flex items-center gap-2">
             {msg && <span className="text-xs text-emerald-600 font-semibold">{msg}</span>}
+            <button onClick={exportWord}
+              className="flex items-center gap-1.5 border border-slate-200 hover:bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all">
+              <FileDown className="w-3.5 h-3.5" /> Word
+            </button>
             <button onClick={handleSave} disabled={saving || !editTitle.trim()}
               className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer disabled:bg-indigo-400">
               <CheckCircle2 className="w-3.5 h-3.5" /> Enregistrer
@@ -469,6 +517,10 @@ export default function EnseignementModule({ settings, members, departments }: E
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => { openEditor(ens); setTimeout(() => exportWord(), 100); }}
+                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Exporter Word">
+                    <FileDown className="w-3.5 h-3.5 text-slate-500" />
+                  </button>
                   <button onClick={() => openEditor(ens)}
                     className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Modifier">
                     <Edit2 className="w-3.5 h-3.5 text-slate-500" />
