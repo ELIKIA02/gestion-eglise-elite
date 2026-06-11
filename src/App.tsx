@@ -13,8 +13,9 @@ import ChurchReportModule from './components/ChurchReportModule';
 import DepartmentsModule from './components/DepartmentsModule';
 import ReportsModule from './components/ReportsModule';
 import SettingsModule from './components/SettingsModule';
+import EnseignementModule from './components/EnseignementModule';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, Menu, X, Settings, ClipboardCheck, Building2, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, Menu, X, Settings, ClipboardCheck, Building2, Trash2, BookOpen } from 'lucide-react';
 
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -122,6 +123,7 @@ export default function App() {
     { id: 'cultes', label: 'Cultes & Activités', icon: CalendarDays },
     { id: 'comms', label: 'Communications', icon: MessageSquareText },
     { id: 'ia', label: 'Assistant IA', icon: Sparkles },
+    { id: 'enseignement', label: 'Enseignement', icon: BookOpen },
     { id: 'audit', label: 'Audit Église', icon: ClipboardCheck },
     { id: 'reports', label: 'Rapports & Exports', icon: FileBarChart2 },
     { id: 'settings', label: 'Paramètres', icon: Settings },
@@ -214,6 +216,9 @@ export default function App() {
           )}
           {activeTab === 'ia' && (
             <PastoralAIModule settings={settings} members={members} transactions={transactions} events={events} onNavigate={handleNavigate} />
+          )}
+          {activeTab === 'enseignement' && (
+            <EnseignementModule settings={settings} members={members} departments={departments} />
           )}
           {activeTab === 'audit' && (
             <ChurchReportModule settings={settings} members={members} transactions={transactions} events={events} />

@@ -82,3 +82,22 @@ export interface ChurchSettings {
   mistralApiKey?: string;
   updatedAt: string;
 }
+
+export interface EnseignementDay {
+  day: number;
+  title: string;
+  text: string;
+}
+
+export interface Enseignement {
+  id?: string;
+  title: string;
+  theme: string;
+  days: EnseignementDay[];
+  type: 'single' | 'series';
+  dayCount: number;
+  createdAt: string;
+  updatedAt: string;
+  scheduledAt?: string;
+  status: 'draft' | 'scheduled';
+}
