@@ -78,11 +78,12 @@ export default function CommunicationsModule({ comms, members, departments, sett
   const [pinnedGroups, setPinnedGroups] = useState<string[]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const [waStatus, setWaStatus] = useState<string>('checking');
-  const [waQR, setWaQR] = useState<string | null>(null);
-  const [qrImage, setQrImage] = useState<string | null>(null);
-  const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+const [waStatus, setWaStatus] = useState<string>('checking');
+const [waQR, setWaQR] = useState<string | null>(null);
+const [qrImage, setQrImage] = useState<string | null>(null);
+const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
+const [resetting, setResetting] = useState(false);
+const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Generate QR image from raw QR string
   useEffect(() => {
@@ -105,9 +106,22 @@ export default function CommunicationsModule({ comms, members, departments, sett
       } catch { setWaStatus('unreachable'); }
     };
     poll();
-    pollRef.current = setInterval(poll, 5000);
+    pollRef.current = setInterval(poll, 2000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
+
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      const res = await fetch('/api/whatsapp/reset', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setWaStatus('connecting');
+        setWaQR(null);
+      }
+    } catch {}
+    setTimeout(() => setResetting(false), 3000);
+  };
 
   useEffect(() => {
     if (waStatus === 'connected') {
@@ -430,7 +444,14 @@ export default function CommunicationsModule({ comms, members, departments, sett
         'bg-red-50 border-red-200 text-red-800'
       }`}>
         {statusIcon(waStatus)}
-        <span className="font-medium">{statusLabel(waStatus)}</span>
+        <span className="font-medium flex-1">{statusLabel(waStatus)}</span>
+        {waStatus !== 'connected' && (
+          <button onClick={handleReset} disabled={resetting}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
+            <Loader2 className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
+            {resetting ? 'Réinitialisation...' : 'Réinitialiser'}
+          </button>
+        )}
       </div>
 
       {qrImage && (

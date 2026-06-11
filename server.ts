@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
-import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp } from "./whatsapp-client";
 
 dotenv.config();
 
@@ -342,6 +342,15 @@ async function startServer() {
       entries.splice(idx, 1);
       saveScheduled(entries);
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/whatsapp/reset", async (_req, res) => {
+    try {
+      await resetWhatsApp();
+      res.json({ success: true, message: "WhatsApp réinitialisé. Un nouveau QR va apparaître dans quelques secondes." });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

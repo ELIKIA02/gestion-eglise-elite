@@ -147,6 +147,18 @@ export function cleanup() {
   if (sock) { sock.end(undefined); sock = null; }
 }
 
+export async function resetWhatsApp(shouldLogout = false) {
+  cleanup();
+  const authDir = path.join(process.cwd(), 'wa_auth');
+  if (fs.existsSync(authDir)) {
+    fs.rmSync(authDir, { recursive: true, force: true });
+  }
+  status = 'disconnected';
+  currentQR = null;
+  reconnectAttempt = 0;
+  await initWhatsApp();
+}
+
 export async function fetchGroups(): Promise<{ id: string; name: string; subject: string }[]> {
   if (!sock || status !== 'connected') return cachedGroups;
   if (Date.now() - groupsLastFetch < 5000) return cachedGroups;
