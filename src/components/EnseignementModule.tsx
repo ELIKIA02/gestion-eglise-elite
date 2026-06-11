@@ -234,6 +234,34 @@ export default function EnseignementModule({ settings, members, departments }: E
     syncWysiwyg();
   };
 
+  const transformText = (fn: (t: string) => string) => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const text = range.toString();
+    if (!text) return;
+    range.deleteContents();
+    range.insertNode(document.createTextNode(fn(text)));
+    sel.removeAllRanges();
+    syncWysiwyg();
+  };
+
+  const uppercaseBold = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const text = sel.toString();
+    if (!text) return;
+    document.execCommand('bold', false);
+    const sel2 = window.getSelection();
+    if (sel2 && !sel2.isCollapsed && sel2.rangeCount) {
+      const range = sel2.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(text.toUpperCase()));
+      sel2.removeAllRanges();
+    }
+    syncWysiwyg();
+  };
+
   const syncWysiwyg = () => {
     const el = document.getElementById(`wysiwyg-${editing?.id}`);
     if (!el) return;
@@ -309,17 +337,24 @@ export default function EnseignementModule({ settings, members, departments }: E
               className="w-full text-xs font-semibold p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
 
             {/* Formatting toolbar */}
-            <div className="flex gap-1 pb-1">
+            <div className="flex gap-1 pb-1 flex-wrap">
               <button type="button" onMouseDown={e => { e.preventDefault(); exec('bold'); }} title="Gras"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
               <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); }} title="Italique"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
-              <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); exec('bold'); }} title="Gras-italique"
+              <button type="button" onMouseDown={e => { e.preventDefault(); exec('bold'); exec('italic'); }} title="Gras italique"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Type className="w-3.5 h-3.5" /></button>
+              <span className="w-px bg-slate-200 mx-0.5" />
+              <button type="button" onMouseDown={e => { e.preventDefault(); transformText(t => t.toUpperCase()); }} title="Majuscule"
+                className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2">A<ArrowUp className="w-3 h-3 inline" /></button>
+              <button type="button" onMouseDown={e => { e.preventDefault(); transformText(t => t.toLowerCase()); }} title="Minuscule"
+                className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer text-[10px] leading-none px-2">a<ArrowDown className="w-3 h-3 inline" /></button>
+              <button type="button" onMouseDown={e => { e.preventDefault(); uppercaseBold(); }} title="Majuscule gras"
+                className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2"><Bold className="w-3 h-3 inline" />A<ArrowUp className="w-3 h-3 inline" /></button>
               <span className="w-px bg-slate-200 mx-0.5" />
               <button type="button" onMouseDown={e => { e.preventDefault(); exec('strikeThrough'); }} title="Barré"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
-              <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertHTML', '`' + window.getSelection()?.toString() + '`'); }} title="Monospace"
+              <button type="button" onMouseDown={e => { e.preventDefault(); transformText(t => '`' + t + '`'); }} title="Monospace"
                 className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Code className="w-3.5 h-3.5" /></button>
               <div className="flex-1" />
               <button type="button" onClick={() => copyDayText(currentDay.text)} title="Copier"
