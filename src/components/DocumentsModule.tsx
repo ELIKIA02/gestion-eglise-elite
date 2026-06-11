@@ -174,6 +174,10 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', fontSize: '10pt' }}>
             <div style={{ textAlign: 'center' }}>
+              <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Signature</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '80px', marginBottom: '4px' }} /> : null}
               <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Cachet et signature</div>
             </div>
           </div>
@@ -205,7 +209,10 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
           {fields.notes && <div style={{ marginTop: '12px', fontSize: '9pt', fontStyle: 'italic', color: '#64748b' }}>{fields.notes}</div>}
           <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
             <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '180px' }}>Signature du donateur</div></div>
-            <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '180px' }}>Cachet de l'église</div></div>
+            <div style={{ textAlign: 'center' }}>
+              {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '70px', marginBottom: '4px' }} /> : null}
+              <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '180px' }}>Cachet de l'église</div>
+            </div>
           </div>
         </div>
       );
@@ -244,7 +251,10 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
         <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
           <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Signature du bénéficiaire</div></div>
-          <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Cachet et signature du pasteur</div></div>
+          <div style={{ textAlign: 'center' }}>
+            {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '80px', marginBottom: '4px' }} /> : null}
+            <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Cachet et signature du pasteur</div>
+          </div>
         </div>
       </div>
     );

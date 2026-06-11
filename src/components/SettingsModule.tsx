@@ -17,11 +17,14 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   const [worshipDays, setWorshipDays] = useState('');
   const [reportHeader, setReportHeader] = useState('');
   const [mistralApiKey, setMistralApiKey] = useState('');
+  const [cachetBase64, setCachetBase64] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const cachetInputRef = useRef<HTMLInputElement>(null);
 
   const isImageLogo = appLogo.startsWith('data:image');
+  const isImageCachet = cachetBase64.startsWith('data:image');
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,6 +35,22 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setAppLogo(dataUrl);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCachetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCachetBase64(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveCachet = () => {
+    setCachetBase64('');
+    if (cachetInputRef.current) cachetInputRef.current.value = '';
   };
 
   const handleRemoveLogo = () => {
@@ -49,6 +68,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setWorshipDays(settings.worshipDays || "Dimanche, Mercredi");
       setReportHeader(settings.reportHeader || "ÉGLISE ÉVANGÉLIQUE DE LA GRÂCE\nSecrétariat Général et Trésorerie\nB.P. 2480 - Tel: +242 06 123 4567 • Brazzaville, Congo");
       setMistralApiKey(settings.mistralApiKey || '');
+      setCachetBase64(settings.cachetBase64 || '');
     }
   }, [settings]);
 
@@ -78,6 +98,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           .join(', '),
         reportHeader: reportHeader.trim(),
         mistralApiKey: mistralApiKey.trim(),
+        cachetBase64: cachetBase64.trim(),
         updatedAt: new Date().toISOString()
       });
 
@@ -104,6 +125,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setWorshipDays("Dimanche, Mercredi");
       setReportHeader("ÉGLISE ÉVANGÉLIQUE DE LA GRÂCE\nSecrétariat Général et Trésorerie\nB.P. 2480 - Tel: +242 06 123 4567 • Brazzaville, Congo");
       setMistralApiKey('');
+      setCachetBase64('');
     }
   };
 
@@ -206,6 +228,36 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                   placeholder="Ex: +242 06 123 4567"
                 />
                 <span className="text-[9px] text-slate-400 block leading-tight">Ce numéro apparaîtra comme expéditeur dans les messages.</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-650 block uppercase tracking-wider flex items-center gap-1">
+                  Cachet numérique
+                </label>
+                <div className="flex gap-2">
+                  <input type="file" accept="image/*" ref={cachetInputRef} onChange={handleCachetUpload}
+                    className="hidden" />
+                  <button type="button" onClick={() => cachetInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs px-3 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" /> Image
+                  </button>
+                  {isImageCachet && (
+                    <button type="button" onClick={handleRemoveCachet}
+                      className="flex items-center gap-1.5 text-xs px-3 py-2 border border-red-200 rounded-lg bg-white hover:bg-red-50 text-red-600 cursor-pointer">
+                      <Trash2 className="w-3.5 h-3.5" /> Enlever
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {isImageCachet ? (
+                    <img src={cachetBase64} alt="Cachet" className="w-12 h-12 object-contain rounded border border-slate-200" />
+                  ) : (
+                    <span className="w-12 h-12 bg-slate-50 rounded text-slate-300 text-[9px] font-medium flex items-center justify-center border border-dashed border-slate-200">
+                      Cachet
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-400">Image carrée recommandée (PNG avec fond transparent)</span>
+                </div>
               </div>
             </div>
           </div>

@@ -80,6 +80,7 @@ export interface ChurchSettings {
   worshipDays: string;
   reportHeader: string;
   mistralApiKey?: string;
+  cachetBase64?: string;
   updatedAt: string;
 }
 
