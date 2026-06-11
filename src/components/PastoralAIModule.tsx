@@ -831,6 +831,32 @@ ${response
                       </div>
                     )}
                   </div>
+                  <button
+                    onClick={() => {
+                      const stored = localStorage.getItem('church_enseignements');
+                      const existing = stored ? JSON.parse(stored) : [];
+                      const newEns = {
+                        id: crypto.randomUUID?.() || Date.now().toString(36),
+                        title: promptInput,
+                        theme: promptInput,
+                        days: parsedDays.map(d => ({ day: d.day, title: `Jour ${d.day}`, text: d.text })),
+                        type: parsedDays.length > 1 ? 'series' : 'single',
+                        dayCount: parsedDays.length,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        status: 'draft',
+                      };
+                      existing.unshift(newEns);
+                      localStorage.setItem('church_enseignements', JSON.stringify(existing));
+                      setResponse('');
+                      setParsedDays([]);
+                      clearSavedSeries();
+                      setSavedSeriesInfo('');
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg font-semibold transition-all cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" /> Envoyer vers Enseignement
+                  </button>
                 </div>
               )}
             </div>
