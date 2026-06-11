@@ -3,6 +3,7 @@ import { collection, addDoc, db, handleFirestoreError, OperationType } from '../
 import { Member, FinanceTransaction, ChurchEvent, CommunicationLog } from '../types';
 import type { ChurchSettings } from '../types';
 import { Users, DollarSign, Calendar, Sparkles, Send, AlertTriangle, ShieldCheck, HeartCrack, ChevronRight } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface DashboardModuleProps {
   members: Member[];
@@ -14,6 +15,14 @@ interface DashboardModuleProps {
   onRefreshAll: () => void;
   onNavigate: (tab: string) => void;
 }
+
+const STATUS_COLORS: Record<string, string> = {
+  Actif: '#10B981',
+  Inactif: '#EF4444',
+  'En observation': '#F59E0B'
+};
+
+const CHART_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#3B82F6", "#EC4899", "#14B8A6", "#8B5CF6", "#F97316"];
 
 export default function DashboardModule({ 
   members, 
@@ -43,6 +52,51 @@ export default function DashboardModule({
       totalOut
     };
   }, [transactions]);
+
+  // Monthly chart data (last 6 months)
+  const monthlyChartData = useMemo(() => {
+    const now = new Date();
+    const monthMap: Record<string, { name: string; Revenus: number; Dépenses: number }> = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthMap[key] = {
+        name: d.toLocaleString('fr-FR', { month: 'short' }),
+        Revenus: 0,
+        Dépenses: 0
+      };
+    }
+    transactions.forEach(t => {
+      const ym = t.date.substring(0, 7);
+      if (monthMap[ym]) {
+        const amt = Number(t.amount) || 0;
+        if (t.type === 'Revenu') monthMap[ym].Revenus += amt;
+        else monthMap[ym].Dépenses += amt;
+      }
+    });
+    return Object.keys(monthMap).sort().map(k => monthMap[k]);
+  }, [transactions]);
+
+  // Member status distribution
+  const memberStatusData = useMemo(() => {
+    const counts: Record<string, number> = { Actif: 0, Inactif: 0, 'En observation': 0 };
+    members.forEach(m => {
+      if (counts[m.status] !== undefined) counts[m.status]++;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [members]);
+
+  // Member ministry distribution
+  const memberMinistryData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    members.forEach(m => {
+      const key = m.ministry || 'Non assigné';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [members]);
 
   // Attendance metrics & decline alarm
   const attendanceDecline = useMemo(() => {
@@ -140,7 +194,7 @@ export default function DashboardModule({
           <button
             onClick={handleSeedDemodatabase}
             disabled={seeding}
-            className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-with-duration cursor-pointer shadow-md shrink-0 border border-indigo-500"
+            className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-with-duration cursor-pointer shadow-md shrink-0 border border-indigo-500"
           >
             <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
             {seeding ? "Création des données..." : "Alimenter la démo (Simulation)"}
@@ -150,77 +204,159 @@ export default function DashboardModule({
 
       {/* KPI statistics cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 flex items-center gap-3 shadow-xs">
-          <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-            <Users className="w-4 h-4 text-indigo-600" />
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200/90 dark:border-slate-600 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-700">
+            <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
           </div>
           <div>
-            <span className="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Registre Fidèles</span>
-            <span className="text-lg font-bold text-slate-850">{members.length} membres</span>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold tracking-wider">Registre Fidèles</span>
+            <span className="text-lg font-bold text-slate-850 dark:text-slate-200">{members.length} membres</span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 flex items-center gap-3 shadow-xs">
-          <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200/90 dark:border-slate-600 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center border border-emerald-100 dark:border-emerald-700">
+            <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
           </div>
           <div>
-            <span className="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Soldes des comptes</span>
-            <span className={`text-lg font-bold ${financials.balance >= 0 ? "text-emerald-750" : "text-rose-700"}`}>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold tracking-wider">Soldes des comptes</span>
+            <span className={`text-lg font-bold ${financials.balance >= 0 ? "text-emerald-750 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}`}>
               {Math.round(financials.balance).toLocaleString('fr-FR')} FCFA
             </span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 flex items-center gap-3 shadow-xs">
-          <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
-            <Calendar className="w-4 h-4 text-amber-600" />
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200/90 dark:border-slate-600 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center border border-amber-100 dark:border-amber-700">
+            <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-300" />
           </div>
           <div>
-            <span className="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Cultes Célébrés</span>
-            <span className="text-lg font-bold text-slate-850">{events.length} cultes</span>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold tracking-wider">Cultes Célébrés</span>
+            <span className="text-lg font-bold text-slate-850 dark:text-slate-200">{events.length} cultes</span>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/90 flex items-center gap-3 shadow-xs">
-          <div className="w-9 h-9 rounded-full bg-sky-50 flex items-center justify-center border border-sky-100">
-            <Send className="w-4 h-4 text-sky-600" />
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200/90 dark:border-slate-600 flex items-center gap-3 shadow-xs">
+          <div className="w-9 h-9 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center border border-sky-100 dark:border-sky-700">
+            <Send className="w-4 h-4 text-sky-600 dark:text-sky-300" />
           </div>
           <div>
-            <span className="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Campagnes Envois</span>
-            <span className="text-lg font-bold text-slate-850">{comms.length} envoyés</span>
+            <span className="text-[9px] text-slate-500 dark:text-slate-400 block uppercase font-bold tracking-wider">Campagnes Envois</span>
+            <span className="text-lg font-bold text-slate-850 dark:text-slate-200">{comms.length} envoyés</span>
           </div>
         </div>
+      </div>
+
+      {/* Chart section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Monthly revenue/expense bar chart */}
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/90 dark:border-slate-600 shadow-xs">
+          <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-4">Finances mensuelles (6 derniers mois)</h3>
+          {monthlyChartData.some(d => d.Revenus > 0 || d.Dépenses > 0) ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={monthlyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px', color: '#F1F5F9', fontSize: '12px' }}
+                  formatter={(value: number) => Math.round(value).toLocaleString('fr-FR') + ' FCFA'}
+                />
+                <Bar dataKey="Revenus" fill="#10B981" name="Revenus" radius={[4,4,0,0]} />
+                <Bar dataKey="Dépenses" fill="#EF4444" name="Dépenses" radius={[4,4,0,0]} />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[250px] text-slate-400 dark:text-slate-500 text-xs italic">Aucune donnée financière mensuelle.</div>
+          )}
+        </div>
+
+        {/* Member status pie chart */}
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/90 dark:border-slate-600 shadow-xs">
+          <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-4">Répartition des membres par statut</h3>
+          {memberStatusData.some(d => d.value > 0) ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={memberStatusData}
+                  cx="50%" cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {memberStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#6B7280'} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px', color: '#F1F5F9', fontSize: '12px' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[250px] text-slate-400 dark:text-slate-500 text-xs italic">Aucun membre enregistré.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Member ministry distribution bar chart */}
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/90 dark:border-slate-600 shadow-xs">
+        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-4">Membres par ministère</h3>
+        {memberMinistryData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={memberMinistryData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#94A3B8' }} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} width={140} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px', color: '#F1F5F9', fontSize: '12px' }}
+                formatter={(value: number) => `${value} membre${value > 1 ? 's' : ''}`}
+              />
+              <Bar dataKey="value" fill="#4F46E5" name="Membres" radius={[0,4,4,0]}>
+                {memberMinistryData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Bar>
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-[250px] text-slate-400 dark:text-slate-500 text-xs italic">Aucune donnée de ministère.</div>
+        )}
       </div>
 
       {/* Realtime Anomalies Advisory & Alarm system */}
       <div id="general-alarms" className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Attendance anomaly alarm */}
         {attendanceDecline ? (
-          <div className="bg-amber-50/70 border border-amber-200/80 p-4 rounded-xl space-y-2 flex flex-col justify-between shadow-xs">
+          <div className="bg-amber-50/70 dark:bg-amber-900/30 border border-amber-200/80 dark:border-amber-700/60 p-4 rounded-xl space-y-2 flex flex-col justify-between shadow-xs">
             <div className="flex items-start gap-2">
-              <HeartCrack className="w-5 h-5 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
+              <HeartCrack className="w-5 h-5 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5 animate-pulse" />
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-amber-800 uppercase block tracking-wider">Chute d'affluence dominicale</span>
-                <p className="text-xs text-amber-950">
-                  Le dernier culte <strong>"{attendanceDecline.title}"</strong> a enregistré seulement {attendanceDecline.latest} fidèles, soit une diminution significative de <strong className="text-red-700 text-sm font-semibold">-{attendanceDecline.percent}%</strong> par rapport à votre moyenne habituelle de {attendanceDecline.avg} participants.
+                <span className="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase block tracking-wider">Chute d'affluence dominicale</span>
+                <p className="text-xs text-amber-950 dark:text-amber-100">
+                  Le dernier culte <strong>"{attendanceDecline.title}"</strong> a enregistré seulement {attendanceDecline.latest} fidèles, soit une diminution significative de <strong className="text-red-700 dark:text-red-400 text-sm font-semibold">-{attendanceDecline.percent}%</strong> par rapport à votre moyenne habituelle de {attendanceDecline.avg} participants.
                 </p>
               </div>
             </div>
             
             <button 
               onClick={() => onNavigate('ia')} 
-              className="text-xs font-semibold text-amber-900 bg-amber-100/80 hover:bg-amber-150 p-2 rounded-lg flex items-center justify-between transition-all pt-2 mt-2 cursor-pointer"
+              className="text-xs font-semibold text-amber-900 dark:text-amber-100 bg-amber-100/80 dark:bg-amber-800/50 hover:bg-amber-150 dark:hover:bg-amber-700/50 p-2 rounded-lg flex items-center justify-between transition-all pt-2 mt-2 cursor-pointer"
             >
               <span>Consulter l'IA pour remédiation pastorale</span>
-              <ChevronRight className="w-4 h-4 text-amber-700" />
+              <ChevronRight className="w-4 h-4 text-amber-700 dark:text-amber-300" />
             </button>
           </div>
         ) : (
-          <div className="bg-emerald-50/60 border border-emerald-150 p-4 rounded-xl flex items-start gap-2 text-emerald-950 shadow-xs">
-            <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+          <div className="bg-emerald-50/60 dark:bg-emerald-900/30 border border-emerald-150 dark:border-emerald-700/60 p-4 rounded-xl flex items-start gap-2 text-emerald-950 dark:text-emerald-100 shadow-xs">
+            <ShieldCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-300 shrink-0 mt-0.5" />
             <div className="space-y-1 text-xs">
-              <span className="text-[10px] font-bold text-emerald-800 uppercase block tracking-wider">Affluence & Tendances Stables</span>
+              <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200 uppercase block tracking-wider">Affluence & Tendances Stables</span>
               <p>Tous les indicateurs d'assistance paroissiale sont au vert. La participation est stable et en progression.</p>
             </div>
           </div>
@@ -228,12 +364,12 @@ export default function DashboardModule({
 
         {/* Treasury warning level */}
         {financials.balance < 150000 ? (
-          <div className="bg-rose-50/70 border border-rose-220 p-4 rounded-xl space-y-2 flex flex-col justify-between shadow-xs">
+          <div className="bg-rose-50/70 dark:bg-rose-900/30 border border-rose-220 dark:border-rose-700/60 p-4 rounded-xl space-y-2 flex flex-col justify-between shadow-xs">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-5 h-5 text-rose-700 shrink-0 mt-0.5 animate-pulse" />
+              <AlertTriangle className="w-5 h-5 text-rose-700 dark:text-rose-300 shrink-0 mt-0.5 animate-pulse" />
               <div className="space-y-1 text-xs">
-                <span className="text-[10px] font-bold text-rose-800 uppercase block tracking-wider">Trésorerie d'Église Vulnérable</span>
-                <p className="text-rose-950">
+                <span className="text-[10px] font-bold text-rose-800 dark:text-rose-200 uppercase block tracking-wider">Trésorerie d'Église Vulnérable</span>
+                <p className="text-rose-950 dark:text-rose-100">
                   Le solde global disponible sur vos comptes paroissiaux est critique ({Math.round(financials.balance).toLocaleString('fr-FR')} FCFA). Le seuil recommandé de secours de 300 000 FCFA n'est plus couvert.
                 </p>
               </div>
@@ -241,17 +377,17 @@ export default function DashboardModule({
             
             <button 
               onClick={() => onNavigate('finances')}
-              className="text-xs font-semibold text-rose-900 bg-rose-100/80 hover:bg-rose-150 p-2 rounded-lg flex items-center justify-between transition-all pt-2 mt-2 cursor-pointer"
+              className="text-xs font-semibold text-rose-900 dark:text-rose-100 bg-rose-100/80 dark:bg-rose-800/50 hover:bg-rose-150 dark:hover:bg-rose-700/50 p-2 rounded-lg flex items-center justify-between transition-all pt-2 mt-2 cursor-pointer"
             >
               <span>Vérifier le livre d'offrandes / dîmes</span>
-              <ChevronRight className="w-4 h-4 text-rose-700" />
+              <ChevronRight className="w-4 h-4 text-rose-700 dark:text-rose-300" />
             </button>
           </div>
         ) : (
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-start gap-2 text-slate-700 shadow-xs">
-            <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+          <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 p-4 rounded-xl flex items-start gap-2 text-slate-700 dark:text-slate-300 shadow-xs">
+            <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
             <div className="space-y-1 text-xs">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase block tracking-wider">Comptes paroissiaux sains</span>
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase block tracking-wider">Comptes paroissiaux sains</span>
               <p>Le solde de trésorerie disponible de {Math.round(financials.balance).toLocaleString('fr-FR')} FCFA couvre largement les prévisions budgétaires normales d'église.</p>
             </div>
           </div>
@@ -261,49 +397,49 @@ export default function DashboardModule({
       {/* Main dashboard body with list overviews */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
         {/* Recent Events List */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 space-y-4 shadow-xs">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-            <h3 className="font-semibold text-sm text-slate-800">Dernières célébrations et cultes</h3>
-            <button onClick={() => onNavigate('cultes')} className="text-indigo-600 hover:text-indigo-700 hover:underline text-[11px] font-semibold cursor-pointer">Voir tout ({events.length})</button>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/90 dark:border-slate-600 space-y-4 shadow-xs">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Dernières célébrations et cultes</h3>
+            <button onClick={() => onNavigate('cultes')} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline text-[11px] font-semibold cursor-pointer">Voir tout ({events.length})</button>
           </div>
           
           <div className="space-y-3">
             {events.slice(0, 3).map(evt => (
-              <div key={evt.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50/80 transition-all">
+              <div key={evt.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-all">
                 <div>
-                  <span className="font-bold text-slate-700 block text-xs">{evt.title}</span>
-                  <span className="text-[10px] text-slate-400">Date: {evt.date} • Prédicateur : {evt.preacher || "—"}</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 block text-xs">{evt.title}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Date: {evt.date} • Prédicateur : {evt.preacher || "—"}</span>
                 </div>
-                <span className="font-mono bg-slate-50 text-slate-700 font-semibold px-2 py-0.5 rounded text-xs">{evt.attendance} présents</span>
+                <span className="font-mono bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 font-semibold px-2 py-0.5 rounded text-xs">{evt.attendance} présents</span>
               </div>
             ))}
             {events.length === 0 && (
-              <p className="text-center py-6 text-slate-450 text-xs italic">Aucune célébration au dossier.</p>
+              <p className="text-center py-6 text-slate-450 dark:text-slate-400 text-xs italic">Aucune célébration au dossier.</p>
             )}
           </div>
         </div>
 
         {/* Recent Financial movements */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 space-y-4 shadow-xs">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-            <h3 className="font-semibold text-sm text-slate-800">Écritures comptables récentes</h3>
-            <button onClick={() => onNavigate('finances')} className="text-indigo-600 hover:text-indigo-700 hover:underline text-[11px] font-semibold cursor-pointer font-sans">Voir tout ({transactions.length})</button>
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200/90 dark:border-slate-600 space-y-4 shadow-xs">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Écritures comptables récentes</h3>
+            <button onClick={() => onNavigate('finances')} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline text-[11px] font-semibold cursor-pointer font-sans">Voir tout ({transactions.length})</button>
           </div>
           
           <div className="space-y-3">
             {transactions.slice(0, 4).map(t => (
-              <div key={t.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50/80 transition-all">
+              <div key={t.id} className="flex justify-between items-center text-xs p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-all">
                 <div>
-                  <span className="font-bold text-slate-800 block">{t.category}</span>
-                  <span className="text-[10px] text-slate-400">Date: {t.date} {t.contributor && ` • Par: ${t.contributor}`}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">{t.category}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Date: {t.date} {t.contributor && ` • Par: ${t.contributor}`}</span>
                 </div>
-                <span className={`font-mono font-bold text-xs ${t.type === 'Revenu' ? 'text-emerald-750' : 'text-slate-700'}`}>
+                <span className={`font-mono font-bold text-xs ${t.type === 'Revenu' ? 'text-emerald-750 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
                   {t.type === 'Revenu' ? '+' : '-'}{Math.round(t.amount).toLocaleString('fr-FR')} FCFA
                 </span>
               </div>
             ))}
             {transactions.length === 0 && (
-              <p className="text-center py-6 text-slate-450 text-xs italic">Aucune écriture financière.</p>
+              <p className="text-center py-6 text-slate-450 dark:text-slate-400 text-xs italic">Aucune écriture financière.</p>
             )}
           </div>
         </div>

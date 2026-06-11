@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, onSnapshot, query, db, loadFromServer } from './firebase';
-import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department } from './types';
+import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department, AppNotification } from './types';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardModule from './components/DashboardModule';
@@ -15,11 +15,11 @@ import ReportsModule from './components/ReportsModule';
 import SettingsModule from './components/SettingsModule';
 import EnseignementModule from './components/EnseignementModule';
 import DocumentsModule from './components/DocumentsModule';
+import NotificationBell from './components/NotificationBell';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, Menu, X, Settings, ClipboardCheck, Building2, Trash2, BookOpen, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, Trash2, BookOpen, FileText } from 'lucide-react';
 
 export default function App() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [presetTarget, setPresetTarget] = useState<string | undefined>();
   const [presetMessageText, setPresetMessageText] = useState<string | undefined>();
@@ -30,6 +30,7 @@ export default function App() {
   const [comms, setComms] = useState<CommunicationLog[]>([]);
   const [settings, setSettings] = useState<ChurchSettings | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
 
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [loadingFinances, setLoadingFinances] = useState(true);
@@ -38,10 +39,13 @@ export default function App() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
   const handleNavigate = (tab: string, text?: string) => {
     if (text) setPresetMessageText(text);
     setActiveTab(tab);
-    setIsMobileMenuOpen(false);
   };
 
   // Real-time data sync via localStorage
@@ -103,15 +107,149 @@ export default function App() {
     return () => { unsubSettings(); unsubMembers(); unsubFinances(); unsubEvents(); unsubComms(); unsubDepts(); };
   }, []);
 
+  // Dark mode
+  useEffect(() => {
+    if (settings?.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings?.theme]);
+
+  // Mobile detection
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close more menu on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const theme = settings?.theme || 'light';
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const list: AppNotification[] = [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const reminderDays = settings?.notifications?.reminderDays ?? 3;
+    const enableBirthday = settings?.notifications?.birthdayReminder !== false;
+    const enableEvent = settings?.notifications?.eventReminder !== false;
+    const enableFinance = settings?.notifications?.lowBalanceAlert !== false;
+    const enableAttendance = settings?.notifications?.attendanceAlert !== false;
+
+    if (enableBirthday) {
+      members.forEach(m => {
+        if (m.birthday && m.id) {
+          const bd = new Date(m.birthday);
+          const thisYearBD = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
+          if (thisYearBD < today) thisYearBD.setFullYear(thisYearBD.getFullYear() + 1);
+          const diff = Math.ceil((thisYearBD.getTime() - today.getTime()) / 86400000);
+          if (diff >= 0 && diff <= reminderDays) {
+            const id = `birthday-${m.id}`;
+            list.push({
+              id, type: 'birthday',
+              title: 'Anniversaire',
+              message: `${m.name} — ${diff === 0 ? "Aujourd'hui" : `Dans ${diff} jour${diff > 1 ? 's' : ''}`}`,
+              date: thisYearBD.toISOString().split('T')[0],
+              read: readNotificationIds.includes(id),
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      });
+    }
+
+    if (enableEvent) {
+      events.forEach(e => {
+        if (e.id && e.date) {
+          const eventDate = new Date(e.date + 'T00:00:00');
+          const diff = Math.ceil((eventDate.getTime() - today.getTime()) / 86400000);
+          if (diff >= 0 && diff <= reminderDays) {
+            const id = `event-${e.id}`;
+            list.push({
+              id, type: 'event',
+              title: 'Événement à venir',
+              message: `${e.title} — ${diff === 0 ? "Aujourd'hui" : `Dans ${diff} jour${diff > 1 ? 's' : ''}`}`,
+              date: e.date,
+              read: readNotificationIds.includes(id),
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      });
+    }
+
+    if (enableFinance) {
+      const balance = transactions.reduce((sum, t) =>
+        t.type === 'Revenu' ? sum + t.amount : sum - t.amount, 0
+      );
+      if (balance < 150000) {
+        const id = 'low-balance';
+        list.push({
+          id, type: 'finance',
+          title: 'Solde faible',
+          message: `Solde actuel: ${balance.toLocaleString()} FCFA`,
+          date: today.toISOString().split('T')[0],
+          read: readNotificationIds.includes(id),
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    if (enableAttendance) {
+      const sorted = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      if (sorted.length >= 4) {
+        const recent = sorted.slice(0, 3);
+        const previous = sorted.slice(3, 6);
+        const recentAvg = recent.reduce((s, e) => s + e.attendance, 0) / recent.length;
+        const prevAvg = previous.reduce((s, e) => s + e.attendance, 0) / previous.length;
+        if (prevAvg > 0 && recentAvg < prevAvg * 0.8) {
+          const id = 'attendance-decline';
+          list.push({
+            id, type: 'attendance',
+            title: 'Baisse d\'assistance',
+            message: `Moyenne récente: ${Math.round(recentAvg)} vs ${Math.round(prevAvg)}`,
+            date: today.toISOString().split('T')[0],
+            read: readNotificationIds.includes(id),
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [members, events, transactions, settings, readNotificationIds]);
+
+  const markNotificationRead = (id: string) => {
+    setReadNotificationIds(prev => prev.includes(id) ? prev : [...prev, id]);
+  };
+
+  const markAllNotificationsRead = () => {
+    setReadNotificationIds(prev => {
+      const allIds = notifications.map(n => n.id);
+      const merged = new Set([...prev, ...allIds]);
+      return Array.from(merged);
+    });
+  };
+
   const handleNavigation = (tabName: string) => {
     setActiveTab(tabName);
     setPresetTarget(undefined);
-    setIsMobileMenuOpen(false);
   };
 
   const handleClearData = () => {
     if (window.confirm('Vider toutes les données locales ? Cette action est irréversible.')) {
       localStorage.removeItem('church_db_data');
+      localStorage.removeItem('church_enseignements');
       window.location.reload();
     }
   };
@@ -131,11 +269,53 @@ export default function App() {
     { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 
+  const MAIN_TABS = [
+    { id: 'dashboard', label: '', icon: LayoutDashboard },
+    { id: 'members', label: 'Membres', icon: Users },
+    { id: 'finances', label: 'Finances', icon: CreditCard },
+    { id: 'cultes', label: 'Cultes', icon: CalendarDays },
+  ];
+  const MORE_TABS = NAV_LINKS.filter(l => !['dashboard', 'members', 'finances', 'cultes'].includes(l.id));
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800">
-      
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-[#0F172A] border-r border-slate-800 shrink-0 md:sticky md:top-0 md:h-screen flex flex-col justify-between pt-safe md:pt-0">
+    <div className={`min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-300 ${
+      theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-800'
+    }`}>
+      <style>{`
+        @media (max-width: 767px) {
+          button, a, select, input[type="button"], input[type="submit"] {
+            touch-action: manipulation;
+          }
+          input, select, textarea {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
+
+      {/* Mobile top bar */}
+      {isMobile && (
+        <div className="flex items-center justify-between bg-[#0F172A] px-4 py-2.5 sticky top-0 z-40 border-b border-slate-800">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {settings?.appLogo?.startsWith('data:image') ? (
+              <img src={settings.appLogo} alt="Logo" className="w-7 h-7 rounded-md object-contain bg-white border border-slate-600 shrink-0" />
+            ) : (
+              <span className="w-7 h-7 rounded-md bg-indigo-600 text-indigo-100 font-semibold flex items-center justify-center border border-indigo-500 text-sm shadow-xs shrink-0">
+                {settings?.appLogo || "†"}
+              </span>
+            )}
+            <span className="font-bold text-xs text-slate-100 truncate">{settings?.appName || "Ma Paroisse"}</span>
+          </div>
+          <NotificationBell
+            notifications={notifications}
+            onMarkRead={markNotificationRead}
+            onMarkAllRead={markAllNotificationsRead}
+            theme={theme}
+          />
+        </div>
+      )}
+
+      {/* Sidebar (desktop only) */}
+      <aside className="hidden md:flex md:w-64 bg-[#0F172A] border-r border-slate-800 shrink-0 md:sticky md:top-0 md:h-screen flex flex-col justify-between pt-safe md:pt-0">
         <div className="p-5 space-y-6">
           <div className="flex justify-between items-center bg-slate-800/40 p-3 rounded-lg border border-slate-800">
               <div className="flex items-center gap-2">
@@ -151,13 +331,15 @@ export default function App() {
                 <span className="text-[9px] uppercase tracking-wider block font-bold text-indigo-400">Application Locale</span>
               </div>
             </div>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-slate-400 hover:text-white">
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <NotificationBell
+              notifications={notifications}
+              onMarkRead={markNotificationRead}
+              onMarkAllRead={markAllNotificationsRead}
+              theme={theme}
+            />
           </div>
 
-          <nav className={`flex-col gap-1 ${isMobileMenuOpen ? "flex" : "hidden md:flex"}`}>
+          <nav className="flex-col gap-1 flex">
             {NAV_LINKS.map(link => {
               const Icon = link.icon;
               return (
@@ -181,7 +363,7 @@ export default function App() {
           </nav>
         </div>
 
-        <div className={`p-4 border-t border-slate-800 ${isMobileMenuOpen ? "block" : "hidden md:block"}`}>
+        <div className="p-4 border-t border-slate-800 hidden md:block">
           <button onClick={handleClearData}
             className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-rose-900 text-slate-300 hover:text-white py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-slate-700">
             <Trash2 className="w-3.5 h-3.5" />
@@ -191,8 +373,10 @@ export default function App() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 pb-safe md:pb-6">
-        <div className="bg-white p-6 md:p-8 rounded-xl border border-slate-200 shadow-md shadow-slate-100/40 min-h-[500px]">
+      <main className={`flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 ${isMobile ? 'pb-20' : ''}`}>
+        <div className={`p-6 md:p-8 rounded-xl border min-h-[500px] transition-colors duration-300 ${
+          theme === 'dark' ? 'bg-slate-800 border-slate-700 shadow-md' : 'bg-white border-slate-200 shadow-md shadow-slate-100/40'
+        }`}>
           <ErrorBoundary>
           {activeTab === 'dashboard' && (
             <DashboardModule members={members} transactions={transactions} events={events} comms={comms}
@@ -204,7 +388,7 @@ export default function App() {
           )}
           {activeTab === 'departments' && (
             <DepartmentsModule departments={departments} members={members} loading={loadingDepartments}
-              onRefresh={() => {}} onMessage={(deptName) => { setPresetTarget(deptName); setActiveTab('comms'); setIsMobileMenuOpen(false); }} />
+              onRefresh={() => {}} onMessage={(deptName) => { setPresetTarget(deptName); setActiveTab('comms'); }} />
           )}
           {activeTab === 'finances' && (
             <FinanceModule transactions={transactions} events={events} loading={loadingFinances} onRefresh={() => {}} />
@@ -237,11 +421,80 @@ export default function App() {
           </ErrorBoundary>
         </div>
 
-        <footer className="text-center text-[10px] text-slate-400 font-medium py-3 border-t border-slate-200/60">
+        <footer className={`text-center text-[10px] font-medium py-3 border-t transition-colors duration-300 ${
+          theme === 'dark' ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-200/60'
+        }`}>
           © {new Date().getFullYear()} {settings?.appName || "Gestion d'Église Élite"} • Données stockées localement.
         </footer>
       </main>
 
+      {/* Mobile bottom tab bar */}
+      {isMobile && (
+        <>
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 pb-safe">
+            {MAIN_TABS.map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setShowMoreMenu(false); }}
+                  className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg min-w-[48px] min-h-[44px] transition-all ${
+                    isActive ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : ''}`} />
+                  {tab.label && <span className="text-[9px] font-semibold mt-0.5">{tab.label}</span>}
+                </button>
+              );
+            })}
+
+            {/* Plus button */}
+            <div className="relative" ref={moreMenuRef}>
+              <button onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg min-w-[48px] min-h-[44px] transition-all ${
+                  showMoreMenu ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+                }`}
+                style={{ touchAction: 'manipulation' }}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+                <span className="text-[9px] font-semibold mt-0.5">Plus</span>
+              </button>
+
+              {showMoreMenu && (
+                <div className="absolute bottom-full mb-2 right-0 bg-[#0F172A] border border-slate-800 rounded-xl p-2 shadow-2xl min-w-[200px]">
+                  {MORE_TABS.map(link => {
+                    const Icon = link.icon;
+                    const a = activeTab === link.id;
+                    return (
+                      <button key={link.id}
+                        onClick={() => { setActiveTab(link.id); setShowMoreMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all min-h-[44px] ${
+                          a ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        <Icon className={`w-4 h-4 ${a ? 'text-indigo-200' : 'text-slate-400'}`} />
+                        <span>{link.label}</span>
+                        {link.count !== undefined && (
+                          <span className="ml-auto text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-slate-800 text-slate-400">
+                            {link.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Overlay */}
+          {showMoreMenu && (
+            <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowMoreMenu(false)} />
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -60,7 +60,7 @@ const formatFCFA = (amount: number) => {
 };
 
 export default function FinanceModule({ transactions, events, loading, onRefresh }: FinanceModuleProps) {
-  const [activeTab, setActiveTab] = useState<'transactions' | 'analytics' | 'basketAssistant' | 'budget'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'analytics' | 'basketAssistant' | 'budget' | 'bilan' | 'journal' | 'grandlivre'>('transactions');
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -70,6 +70,15 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCulteFilter, setSelectedCulteFilter] = useState('all');
+
+  // Journal General state
+  const [journalPage, setJournalPage] = useState(1);
+  const [journalSearch, setJournalSearch] = useState('');
+
+  // Grand Livre state
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const ITEMS_PER_PAGE = 20;
 
   // Standard Form State
   const [formData, setFormData] = useState({
@@ -385,17 +394,91 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
     }).sort((a, b) => b.date.localeCompare(a.date)); // Sort by date desc
   }, [transactions, typeFilter, categoryFilter, selectedCulteFilter, searchQuery, events]);
 
+  // Data for Bilan Comptable
+  const bilanData = useMemo(() => {
+    const revenueByCategory: { [cat: string]: number } = {};
+    const expenseByCategory: { [cat: string]: number } = {};
+
+    REVENUE_KIND.forEach(cat => { revenueByCategory[cat] = 0; });
+    EXPENSE_KIND.forEach(cat => { expenseByCategory[cat] = 0; });
+
+    transactions.forEach(t => {
+      const amt = Number(t.amount) || 0;
+      if (t.type === 'Revenu' && revenueByCategory[t.category] !== undefined) {
+        revenueByCategory[t.category] += amt;
+      } else if (t.type === 'Dépense' && expenseByCategory[t.category] !== undefined) {
+        expenseByCategory[t.category] += amt;
+      }
+    });
+
+    const totalRevenues = Object.values(revenueByCategory).reduce((a, b) => a + b, 0);
+    const totalExpenses = Object.values(expenseByCategory).reduce((a, b) => a + b, 0);
+
+    return {
+      revenueByCategory,
+      expenseByCategory,
+      totalRevenues,
+      totalExpenses,
+      netPosition: totalRevenues - totalExpenses
+    };
+  }, [transactions]);
+
+  // Data for Grand Livre
+  const grandLivreData = useMemo(() => {
+    const allCategories = [...REVENUE_KIND, ...EXPENSE_KIND];
+    const grouped: { [cat: string]: { transactions: FinanceTransaction[]; total: number; type: 'Revenu' | 'Dépense' } } = {};
+
+    allCategories.forEach(cat => {
+      const catTransactions = transactions
+        .filter(t => t.category === cat)
+        .sort((a, b) => b.date.localeCompare(a.date));
+      const total = catTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const type = REVENUE_KIND.includes(cat) ? 'Revenu' : 'Dépense';
+      grouped[cat] = { transactions: catTransactions, total, type };
+    });
+
+    return grouped;
+  }, [transactions]);
+
+  // Journal General data with search and pagination
+  const journalFiltered = useMemo(() => {
+    const query = journalSearch.toLowerCase();
+    return transactions
+      .filter(t => {
+        if (journalSearch === '') return true;
+        return (
+          t.category.toLowerCase().includes(query) ||
+          (t.contributor || '').toLowerCase().includes(query) ||
+          (t.notes || '').toLowerCase().includes(query) ||
+          t.date.includes(query) ||
+          t.type.toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [transactions, journalSearch]);
+
+  const journalPaginated = useMemo(() => {
+    return journalFiltered.slice(0, journalPage * ITEMS_PER_PAGE);
+  }, [journalFiltered, journalPage]);
+
+  const hasMore = journalPaginated.length < journalFiltered.length;
+
+  // Toggle grand livre category
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+  };
+
   return (
     <div className="space-y-6 font-sans">
       
       {/* Top Header Row */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl text-slate-800 font-bold tracking-tight flex items-center gap-2">
-            <Coins className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-xl text-slate-800 dark:text-slate-200 font-bold tracking-tight flex items-center gap-2">
+            <Coins className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             Trésorerie & Comptabilité de la Paroisse
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Suivi des collectes, dîmes, offrandes de culte et dépenses administratives en République du Congo.
           </p>
         </div>
@@ -406,9 +489,9 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
               setActiveTab('basketAssistant');
               setIsAdding(false);
             }}
-            className="flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3.5 py-1.8 rounded-lg text-xs font-bold transition-all cursor-pointer border border-indigo-200 shadow-3xs"
+            className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-3.5 py-1.8 rounded-lg text-xs font-bold transition-all cursor-pointer border border-indigo-200 dark:border-indigo-700 shadow-3xs"
           >
-            <Calculator className="w-3.5 h-3.5 text-indigo-600" />
+            <Calculator className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             Saisie de Culte (Multi-Corbeilles)
           </button>
 
@@ -430,8 +513,8 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
       {/* Success Notification Alert */}
       {successMsg && (
-        <div className="bg-emerald-50 border border-emerald-250 p-3 rounded-lg flex items-center gap-3 text-xs text-emerald-800 animate-fade-in shadow-3xs font-medium">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-250 dark:border-emerald-800 p-3 rounded-lg flex items-center gap-3 text-xs text-emerald-800 dark:text-emerald-300 animate-fade-in shadow-3xs font-medium">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
@@ -451,45 +534,45 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-2xs">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 flex items-center justify-between shadow-2xs">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-bold">Cumul des Entrées / Recettes</span>
-            <span className="text-2xl font-bold tracking-tight text-emerald-700 block mt-1">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest block font-bold">Cumul des Entrées / Recettes</span>
+            <span className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 block mt-1">
               +{formatFCFA(stats.totalRevenues)}
             </span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Collectes ordinaires, dîmes, actions de grâces.</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">Collectes ordinaires, dîmes, actions de grâces.</span>
           </div>
-          <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100">
-            <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center border border-emerald-100 dark:border-emerald-800">
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-2xs">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 flex items-center justify-between shadow-2xs">
           <div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-bold">Total des Dépenses / Sorties</span>
-            <span className="text-2xl font-bold tracking-tight text-amber-700 block mt-1">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest block font-bold">Total des Dépenses / Sorties</span>
+            <span className="text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-400 block mt-1">
               -{formatFCFA(stats.totalExpenses)}
             </span>
-            <span className="text-[10px] text-slate-500 block mt-0.5">Charges, soutiens pastoraux, évangélisations.</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5">Charges, soutiens pastoraux, évangélisations.</span>
           </div>
-          <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
-            <TrendingDown className="w-4 h-4 text-amber-600" />
+          <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center border border-amber-100 dark:border-amber-800">
+            <TrendingDown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
         </div>
       </div>
 
       {/* Form: Standard Writing Entry */}
       {isAdding && (
-        <form onSubmit={handleCreate} className="bg-white p-5 rounded-xl border border-slate-200 shadow-md space-y-4 animate-fade-in">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-            <h3 className="font-bold text-sm text-indigo-650 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-500" />
+        <form onSubmit={handleCreate} className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-md space-y-4 animate-fade-in">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-2">
+            <h3 className="font-bold text-sm text-indigo-650 dark:text-indigo-400 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
               Saisie d'une écriture comptable unique
             </h3>
             <button 
               type="button" 
               onClick={() => setIsAdding(false)} 
-              className="text-[11px] text-slate-550 hover:text-slate-800"
+              className="text-[11px] text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
             >
               Fermer la boîte
             </button>
@@ -497,15 +580,15 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Type d'Écriture *</label>
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Type d'Écriture *</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => handleTypeChange('Revenu')}
                   className={`flex-1 text-xs py-2 px-3 rounded-lg font-semibold border transition-all cursor-pointer ${
                     formData.type === 'Revenu' 
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-3xs' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 shadow-3xs' 
+                      : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   Recette (+)
@@ -515,8 +598,8 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                   onClick={() => handleTypeChange('Dépense')}
                   className={`flex-1 text-xs py-2 px-3 rounded-lg font-semibold border transition-all cursor-pointer ${
                     formData.type === 'Dépense' 
-                      ? 'bg-amber-50 text-amber-700 border-amber-250 shadow-3xs' 
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-250 dark:border-amber-700 shadow-3xs' 
+                      : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   Dépense (—)
@@ -525,11 +608,11 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Catégorie d'Église *</label>
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Catégorie d'Église *</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-indigo-600 font-medium"
+                className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 font-medium text-slate-800 dark:text-slate-200"
               >
                 {formData.type === 'Revenu' 
                   ? REVENUE_KIND.map(c => <option key={c} value={c}>{c}</option>)
@@ -539,7 +622,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Montant (en FCFA) *</label>
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Montant (en FCFA) *</label>
               <div className="relative">
                 <input
                   type="number"
@@ -548,30 +631,30 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="Ex: 50000"
-                  className="w-full text-xs p-2.5 pr-14 border border-slate-200 rounded-lg focus:outline-indigo-600 font-semibold"
+                  className="w-full text-xs p-2.5 pr-14 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 font-semibold bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                 />
-                <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold uppercase">FCFA</span>
+                <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">FCFA</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Date d'opération</label>
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Date d'opération</label>
               <input
                 type="date"
                 required
                 value={formData.date}
                 disabled={!!formData.linkedEventId}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-slate-50/50"
+                className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-slate-50/50 dark:bg-slate-700/50 text-slate-800 dark:text-slate-200"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block flex items-center gap-1">
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block flex items-center gap-1">
                 Associer à un Culte de la paroisse
-                <span className="text-[9px] bg-slate-100 text-slate-500 font-normal px-1 py-0.2 rounded-full">Automatique</span>
+                <span className="text-[9px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-normal px-1 py-0.2 rounded-full">Automatique</span>
               </label>
               <select
                 value={formData.linkedEventId}
@@ -584,7 +667,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                     date: matchedEv ? matchedEv.date : new Date().toISOString().substring(0, 10)
                   });
                 }}
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-indigo-600"
+                className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200"
               >
                 <option value="">-- Culte libre sans rattachement --</option>
                 {sortedWorshipEvents.map(event => (
@@ -596,33 +679,33 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Contributeur / Nom de famille</label>
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Contributeur / Nom de famille</label>
               <input
                 type="text"
                 value={formData.contributor}
                 onChange={(e) => setFormData({ ...formData, contributor: e.target.value })}
                 placeholder="Ex: Frère Jean-Pierre M."
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600"
+                className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 block">Notes administratives / Justificatif de dépenses</label>
+            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Notes administratives / Justificatif de dépenses</label>
             <input
               type="text"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Ex: enveloppes reçues au premier service d'Adoration"
-              className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600"
+              className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
             <button 
               type="button" 
               onClick={() => setIsAdding(false)}
-              className="text-slate-500 hover:bg-slate-50 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+              className="text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer"
             >
               Annuler
             </button>
@@ -638,7 +721,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
       )}
 
       {/* Internal Navigation Tabs */}
-      <div className="border-b border-slate-200 flex gap-4 text-xs font-bold overflow-x-auto shrink-0 pb-1">
+      <div className="border-b border-slate-200 dark:border-slate-600 flex gap-4 text-xs font-bold overflow-x-auto shrink-0 pb-1">
         <button
           onClick={() => {
             setActiveTab('transactions');
@@ -646,8 +729,8 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           }}
           className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'transactions' && !isAdding
-              ? 'border-b-2 border-indigo-650 text-indigo-700 font-bold' 
-              : 'text-slate-400 hover:text-slate-600'
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
           }`}
         >
           Opérations Journalières
@@ -660,13 +743,13 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           }}
           className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
             activeTab === 'basketAssistant' 
-              ? 'border-b-2 border-indigo-650 text-indigo-700 font-bold' 
-              : 'text-slate-400 hover:text-slate-600'
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
           }`}
         >
-          <Calculator className="w-3.5 h-3.5 text-slate-450" />
+          <Calculator className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
           Renseigner Corbeilles de Culte
-          <span className="bg-amber-150 text-amber-900 text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-1">Exclusivité</span>
+          <span className="bg-amber-150 dark:bg-amber-900/50 text-amber-900 dark:text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-1">Exclusivité</span>
         </button>
 
         <button
@@ -676,8 +759,8 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           }}
           className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'analytics' 
-              ? 'border-b-2 border-indigo-650 text-indigo-700 font-bold' 
-              : 'text-slate-400 hover:text-slate-600'
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
           }`}
         >
           Statistiques & Graphiques (Congo)
@@ -690,11 +773,56 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           }}
           className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'budget' 
-              ? 'border-b-2 border-indigo-650 text-indigo-700 font-bold' 
-              : 'text-slate-400 hover:text-slate-600'
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
           }`}
         >
           Projections Budgétaires
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('bilan');
+            setIsAdding(false);
+          }}
+          className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'bilan' 
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+          Bilan Comptable
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('journal');
+            setIsAdding(false);
+          }}
+          className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'journal' 
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}
+        >
+          <ArrowRightLeft className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+          Journal Général
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('grandlivre');
+            setIsAdding(false);
+          }}
+          className={`pb-2.5 px-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'grandlivre' 
+              ? 'border-b-2 border-indigo-650 dark:border-indigo-400 text-indigo-700 dark:text-indigo-400 font-bold' 
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}
+        >
+          <ListFilter className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
+          Grand Livre
         </button>
       </div>
 
@@ -703,20 +831,20 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
         <div className="space-y-4 animate-fade-in">
           
           {/* Advanced Multi-Filters Header */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/90 flex flex-col gap-3">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-              <ListFilter className="w-3 h-3 text-slate-400" />
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/90 dark:border-slate-600 flex flex-col gap-3">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
+              <ListFilter className="w-3 h-3 text-slate-400 dark:text-slate-500" />
               Panneau de tri par Culte & Catégorie
             </span>
             
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               {/* Type selector */}
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2 text-xs">
-                <ArrowRightLeft className="w-3.5 h-3.5 text-slate-450" />
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 text-xs">
+                <ArrowRightLeft className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
                 <select 
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value as any)}
-                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 w-full"
+                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 w-full"
                 >
                   <option value="all">Tous les flux</option>
                   <option value="Revenu">Recettes seulement</option>
@@ -725,12 +853,12 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
               </div>
 
               {/* Category selector */}
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2 text-xs">
-                <FileText className="w-3.5 h-3.5 text-slate-450" />
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 text-xs">
+                <FileText className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
                 <select 
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 w-full"
+                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 w-full"
                 >
                   <option value="all">Toutes les catégories</option>
                   <optgroup label="REVENUS">
@@ -743,12 +871,12 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
               </div>
 
               {/* Rattaché à quel culte */}
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2 text-xs">
-                <Calendar className="w-3.5 h-3.5 text-slate-450" />
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 text-xs">
+                <Calendar className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500" />
                 <select 
                   value={selectedCulteFilter}
                   onChange={(e) => setSelectedCulteFilter(e.target.value)}
-                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 w-full"
+                  className="bg-transparent border-0 focus:ring-0 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 w-full"
                 >
                   <option value="all">Tous les Cultes</option>
                   {sortedWorshipEvents.map(event => (
@@ -760,27 +888,27 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
               </div>
 
               {/* Search input field */}
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2 text-xs">
-                <Search className="w-3.5 h-3.5 text-slate-450 whitespace-nowrap" />
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 text-xs">
+                <Search className="w-3.5 h-3.5 text-slate-450 dark:text-slate-500 whitespace-nowrap" />
                 <input 
                   type="text"
                   placeholder="Rechercher (ex: Jean)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent border-0 focus:ring-0 py-1 text-xs text-slate-705 w-full outline-hidden"
+                  className="bg-transparent border-0 focus:ring-0 py-1 text-xs text-slate-705 dark:text-slate-300 w-full outline-hidden"
                 />
               </div>
             </div>
 
             {/* Quick action buttons row */}
-            <div className="flex justify-between items-center text-[11px] text-slate-500 font-semibold pt-1">
+            <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 font-semibold pt-1">
               <span>Résultats filtrés: {filteredTransactions.length} écriture(s)</span>
               <button 
                 type="button" 
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 text-indigo-650 hover:text-indigo-850 cursor-pointer bg-white px-2 py-0.8 rounded border border-slate-200 shadow-3xs"
+                className="flex items-center gap-1.5 text-indigo-650 dark:text-indigo-400 hover:text-indigo-850 dark:hover:text-indigo-300 cursor-pointer bg-white dark:bg-slate-700 px-2 py-0.8 rounded border border-slate-200 dark:border-slate-600 shadow-3xs"
               >
-                <Download className="w-3 h-3 text-indigo-500" />
+                <Download className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
                 Exporter en format Excel / CSV
               </button>
             </div>
@@ -788,27 +916,27 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
           {/* Transactions Data Table */}
           {loading ? (
-            <div className="text-center py-12 text-slate-500 font-semibold animate-pulse">
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400 font-semibold animate-pulse">
               Chargement des flux financiers en direct de Firestore...
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="text-center py-16 bg-white border border-slate-200 rounded-xl space-y-2 text-slate-450">
-              <Coins className="w-8 h-8 text-slate-300 mx-auto" />
+            <div className="text-center py-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl space-y-2 text-slate-450 dark:text-slate-500">
+              <Coins className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
               <p className="text-sm">Aucun flux ne correspond aux filtres de tri d'Église.</p>
               <button 
                 type="button" 
                 onClick={() => { setCategoryFilter('all'); setTypeFilter('all'); setSelectedCulteFilter('all'); setSearchQuery(''); }}
-                className="text-xs text-indigo-600 hover:underline cursor-pointer"
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
               >
                 Annuler les filtres
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-3xs">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden shadow-3xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200/90 text-slate-500 font-bold uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200/90 dark:border-slate-600 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                       <th className="p-3">Date d'effet</th>
                       <th className="p-3">Désignation / Rubrique</th>
                       <th className="p-3">Notes & Culte liés</th>
@@ -818,44 +946,44 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       <th className="p-3 text-center">Nettoyer</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
                     {filteredTransactions.map(t => (
-                      <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-3 font-mono text-slate-500 whitespace-nowrap">{t.date}</td>
+                      <tr key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                        <td className="p-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">{t.date}</td>
                         <td className="p-3">
-                          <div className="font-bold text-slate-900">{t.category}</div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{t.category}</div>
                         </td>
                         <td className="p-3 max-w-[280px]">
-                          <div className="text-slate-650 leading-relaxed text-xs break-words">{t.notes || "—"}</div>
+                          <div className="text-slate-650 dark:text-slate-400 leading-relaxed text-xs break-words">{t.notes || "—"}</div>
                         </td>
-                        <td className="p-3 font-medium text-slate-805">
+                        <td className="p-3 font-medium text-slate-805 dark:text-slate-300">
                           {t.contributor ? (
                             <span className="flex items-center gap-1">
-                              <User className="w-3 h-3 text-slate-400" />
+                              <User className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                               {t.contributor}
                             </span>
                           ) : (
-                            <span className="text-slate-400 italic">Autre collecte d'assemblée</span>
+                            <span className="text-slate-400 dark:text-slate-500 italic">Autre collecte d'assemblée</span>
                           )}
                         </td>
                         <td className="p-3">
                           <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] tracking-wide inline-block ${
                             t.type === 'Revenu' 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-150' 
-                              : 'bg-amber-50 text-amber-700 border border-amber-150'
+                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-150 dark:border-emerald-800' 
+                              : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-150 dark:border-amber-800'
                           }`}>
                             {t.type === 'Revenu' ? 'RECETTE (Entrée)' : 'SORTIE / CHARGE'}
                           </span>
                         </td>
                         <td className={`p-3 text-right font-bold text-[13px] whitespace-nowrap tracking-tight ${
-                          t.type === 'Revenu' ? 'text-emerald-700' : 'text-slate-800'
+                          t.type === 'Revenu' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'
                         }`}>
                           {t.type === 'Revenu' ? '+' : '-'}{formatFCFA(t.amount)}
                         </td>
                         <td className="p-3 text-center">
                           <button
                             onClick={() => t.id && handleDelete(t.id)}
-                            className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-slate-50 transition-all cursor-pointer"
+                            className="text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 p-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer"
                             title="Supprimer la transaction comptable"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -873,13 +1001,13 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
       {/* Tab CONTENT: Advanced Multi-Basket Assistant (Saisie Rapide Panoramique de Culte) */}
       {activeTab === 'basketAssistant' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6 animate-fade-in font-sans">
-          <div className="border-b border-indigo-100 pb-3">
-            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm space-y-6 animate-fade-in font-sans">
+          <div className="border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
+              <Calculator className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Calculateur Multi-Corbeilles de Culte (Rapport Trésorier Express)
             </h3>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Utilisez ce panneau pour dactylographier globalement les différentes corbeilles et enveloppes collectées à la fin d'un culte paroissial répertorié. L'assistant scindera automatiquement les flux en autant de fiches d'écritures correspondantes dans la base en un seul clic !
             </p>
           </div>
@@ -887,9 +1015,9 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           <form onSubmit={handleBasketAssistantSubmit} className="space-y-6">
             
             {/* Step 1: Link Culte event */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-200 dark:border-slate-600 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-indigo-750 block uppercase tracking-wide">
+                <label className="text-xs font-extrabold text-indigo-750 dark:text-indigo-400 block uppercase tracking-wide">
                   1. Choisir le Culte ou Activité concerné *
                 </label>
                 <select
@@ -903,7 +1031,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       setBasketNotes(`Collecte comptée le ${ev.date} sous le ministère de orateur: ${ev.preacher || "Pasteur"}`);
                     }
                   }}
-                  className="w-full text-xs p-3 border border-slate-250 rounded-lg bg-white focus:outline-indigo-600 font-bold text-slate-800"
+                  className="w-full text-xs p-3 border border-slate-250 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 font-bold text-slate-800 dark:text-slate-200"
                 >
                   <option value="">-- Sélectionnez un culte de la liste --</option>
                   {sortedWorshipEvents.map(ev => (
@@ -912,13 +1040,13 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-450 italic">
+                <p className="text-[10px] text-slate-450 dark:text-slate-500 italic">
                   Note : Si le culte n'apparait pas, veuillez le créer d'abord sous l'onglet "Cultes & Activités".
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-655 block uppercase tracking-wide">
+                <label className="text-xs font-extrabold text-slate-655 dark:text-slate-400 block uppercase tracking-wide">
                   Notes de synthèse / observations pour les relevés
                 </label>
                 <textarea
@@ -926,22 +1054,22 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                   value={basketNotes}
                   onChange={(e) => setBasketNotes(e.target.value)}
                   placeholder="Ex: Comptage effectué par les membres du département d'accueil et d'administration."
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 font-medium"
+                  className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 font-medium bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
                 />
               </div>
             </div>
 
             {/* Step 2: Input cash for each basket */}
             <div className="space-y-2">
-              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-widest block">
+              <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-widest block">
                 2. Saisir les Totaux des Corbeilles (Baskets de collecte en FCFA)
               </span>
 
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 
                 {/* Corbeille Offrande Ordinaire */}
-                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                <div className="bg-slate-50/70 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
                     <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
                     <span>Offrande Ordinaire</span>
                   </div>
@@ -952,16 +1080,16 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       value={baskets.offrandeOrdinaire}
                       onChange={(e) => setBaskets({ ...baskets, offrandeOrdinaire: e.target.value })}
                       placeholder="Indisponible"
-                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 bg-white rounded-lg focus:outline-indigo-600 font-extrabold text-indigo-700"
+                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-indigo-600 dark:focus:outline-indigo-400 font-extrabold text-indigo-700 dark:text-indigo-400"
                     />
-                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 font-bold font-mono">FCFA</span>
+                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">FCFA</span>
                   </div>
-                  <span className="text-[10px] text-slate-450 block font-medium">Panier classique assemblée</span>
+                  <span className="text-[10px] text-slate-450 dark:text-slate-500 block font-medium">Panier classique assemblée</span>
                 </div>
 
                 {/* Enveloppes des Dîmes */}
-                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                <div className="bg-slate-50/70 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
                     <span>Dîmes (10%)</span>
                   </div>
@@ -972,16 +1100,16 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       value={baskets.dime}
                       onChange={(e) => setBaskets({ ...baskets, dime: e.target.value })}
                       placeholder="Indisponible"
-                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 bg-white rounded-lg focus:outline-emerald-605 font-extrabold text-emerald-700"
+                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-emerald-605 dark:focus:outline-emerald-400 font-extrabold text-emerald-700 dark:text-emerald-400"
                     />
-                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 font-bold font-mono">FCFA</span>
+                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">FCFA</span>
                   </div>
-                  <span className="text-[10px] text-slate-450 block font-medium">Fidélité dîmes individuelles</span>
+                  <span className="text-[10px] text-slate-450 dark:text-slate-500 block font-medium">Fidélité dîmes individuelles</span>
                 </div>
 
                 {/* Corbeille Action de Grâce */}
-                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                <div className="bg-slate-50/70 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
                     <span>Action de Grâce</span>
                   </div>
@@ -992,16 +1120,16 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       value={baskets.actionDeGrace}
                       onChange={(e) => setBaskets({ ...baskets, actionDeGrace: e.target.value })}
                       placeholder="Indisponible"
-                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 bg-white rounded-lg focus:outline-amber-600 font-extrabold text-amber-700"
+                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-amber-600 dark:focus:outline-amber-400 font-extrabold text-amber-700 dark:text-amber-400"
                     />
-                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 font-bold font-mono">FCFA</span>
+                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">FCFA</span>
                   </div>
-                  <span className="text-[10px] text-slate-450 block font-medium">Témoignages & reconnaissance</span>
+                  <span className="text-[10px] text-slate-450 dark:text-slate-500 block font-medium">Témoignages & reconnaissance</span>
                 </div>
 
                 {/* Corbeille Fonds Travaux */}
-                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                <div className="bg-slate-50/70 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                     <span>Fonds Construction</span>
                   </div>
@@ -1012,16 +1140,16 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       value={baskets.construction}
                       onChange={(e) => setBaskets({ ...baskets, construction: e.target.value })}
                       placeholder="Indisponible"
-                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 bg-white rounded-lg focus:outline-rose-500 font-extrabold text-rose-700"
+                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-rose-500 dark:focus:outline-rose-400 font-extrabold text-rose-700 dark:text-rose-400"
                     />
-                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 font-bold font-mono">FCFA</span>
+                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">FCFA</span>
                   </div>
-                  <span className="text-[10px] text-slate-450 block font-medium">Fonds d'investissement / Loyer</span>
+                  <span className="text-[10px] text-slate-450 dark:text-slate-500 block font-medium">Fonds d'investissement / Loyer</span>
                 </div>
 
                 {/* Corbeille Enfants / Social */}
-                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 space-y-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                <div className="bg-slate-50/70 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-200 dark:border-slate-600 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 dark:text-slate-200">
                     <span className="w-2.5 h-2.5 rounded-full bg-cyan-600"></span>
                     <span>École Dimanche</span>
                   </div>
@@ -1032,11 +1160,11 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       value={baskets.socialEnfants}
                       onChange={(e) => setBaskets({ ...baskets, socialEnfants: e.target.value })}
                       placeholder="Indisponible"
-                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 bg-white rounded-lg focus:outline-cyan-600 font-extrabold text-cyan-700"
+                      className="w-full text-xs p-2.5 pr-12 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg focus:outline-cyan-600 dark:focus:outline-cyan-400 font-extrabold text-cyan-700 dark:text-cyan-400"
                     />
-                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 font-bold font-mono">FCFA</span>
+                    <span className="absolute right-3 top-3 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">FCFA</span>
                   </div>
-                  <span className="text-[10px] text-slate-450 block font-medium">Collectes moniteurs EcoDim</span>
+                  <span className="text-[10px] text-slate-450 dark:text-slate-500 block font-medium">Collectes moniteurs EcoDim</span>
                 </div>
 
               </div>
@@ -1074,9 +1202,9 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 font-sans animate-fade-in">
           
           {/* Trends diagram in FCFA */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <h3 className="font-semibold text-sm text-slate-800 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-indigo-650" />
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-indigo-650 dark:text-indigo-400" />
               Évolution Financière Paroissiale (Frs CFA — 6 derniers mois)
             </h3>
             <div className="h-64 w-full">
@@ -1095,19 +1223,19 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           </div>
 
           {/* Categories distribute */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-6 shadow-xs">
-            <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2">
-              <PieChartIcon className="w-4 h-4 text-slate-600" />
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 space-y-6 shadow-xs">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <PieChartIcon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
               Répartition Analytique des Fonds (CFA)
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               {/* Recettes breakdown */}
-              <div className="space-y-2 text-center border-r border-slate-100 pr-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase block tracking-wide">Ventilation des Recettes</span>
+              <div className="space-y-2 text-center border-r border-slate-100 dark:border-slate-700 pr-2">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase block tracking-wide">Ventilation des Recettes</span>
                 {categoryDistribution.revenues.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-12">Aucune recette répertoriée</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 py-12">Aucune recette répertoriée</p>
                 ) : (
                   <div className="h-44 flex flex-col justify-between items-center">
                     <div className="h-32 w-full">
@@ -1134,7 +1262,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       {categoryDistribution.revenues.map(r => (
                         <span key={r.name} className="flex items-center gap-1.5 whitespace-nowrap">
                           <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: r.color }}></span>
-                          <span className="text-slate-600">{r.name} ({Math.round(r.value / (stats.totalRevenues || 1) * 100)}%)</span>
+                          <span className="text-slate-600 dark:text-slate-400">{r.name} ({Math.round(r.value / (stats.totalRevenues || 1) * 100)}%)</span>
                         </span>
                       ))}
                     </div>
@@ -1144,9 +1272,9 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
               {/* Dépenses breakdown */}
               <div className="space-y-2 text-center pl-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase block tracking-wide">Ventilation des Dépenses</span>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase block tracking-wide">Ventilation des Dépenses</span>
                 {categoryDistribution.expenses.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-12">Aucune dépense enregistrée</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 py-12">Aucune dépense enregistrée</p>
                 ) : (
                   <div className="h-44 flex flex-col justify-between items-center">
                     <div className="h-32 w-full">
@@ -1173,7 +1301,7 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
                       {categoryDistribution.expenses.map(e => (
                         <span key={e.name} className="flex items-center gap-1.5 whitespace-nowrap">
                           <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: e.color }}></span>
-                          <span className="text-slate-600">{e.name} ({Math.round(e.value / (stats.totalExpenses || 1) * 100)}%)</span>
+                          <span className="text-slate-600 dark:text-slate-400">{e.name} ({Math.round(e.value / (stats.totalExpenses || 1) * 100)}%)</span>
                         </span>
                       ))}
                     </div>
@@ -1188,18 +1316,18 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
       {/* Tab CONTENT: Budget Objectives and Forecast in FCFA */}
       {activeTab === 'budget' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-3xs space-y-6 animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-600 shadow-3xs space-y-6 animate-fade-in">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
             <div>
-              <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 text-sm">
+                <FileSpreadsheet className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 Table de Correspondance & Projections Budgétaires Annuelles / Mensuelles
               </h3>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Comparatif en direct entre les prévisions arrêtées par le comité des finances d'église et la réalité.
               </p>
             </div>
-            <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-750 font-bold px-2.5 py-0.8 rounded-full uppercase tracking-wider">
+            <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-750 dark:text-indigo-400 font-bold px-2.5 py-0.8 rounded-full uppercase tracking-wider">
               En Francs CFA (république congo)
             </span>
           </div>
@@ -1208,21 +1336,21 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
             
             {/* KPI 1 : Objective Dîmes/Offrandes */}
             <div>
-              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 <span className="flex items-center gap-1">
                   1. Dîmes & Offrandes (Objectif Budget Mensuel Général)
                 </span>
-                <span className="text-slate-800">
+                <span className="text-slate-800 dark:text-slate-200">
                   {formatFCFA(stats.totalRevenues)} réalisés / 4 500 000 FCFA projeté
                 </span>
               </div>
-              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden flex">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden flex">
                 <div 
                   className="bg-indigo-600 h-full transition-all duration-550" 
                   style={{ width: `${Math.min(100, (stats.totalRevenues / 4500000) * 100)}%` }}
                 ></div>
               </div>
-              <div className="flex justify-between text-[10px] text-slate-450 mt-1 font-semibold">
+              <div className="flex justify-between text-[10px] text-slate-450 dark:text-slate-500 mt-1 font-semibold">
                 <span>Rendement: {Math.round((stats.totalRevenues / 4500000) * 100)}%</span>
                 <span>Cible: 4,5M FCFA</span>
               </div>
@@ -1230,21 +1358,21 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
             {/* KPI 2 : Charges d'exploitation */}
             <div>
-              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 <span className="flex items-center gap-1">
                   2. Charges d'Exploitation Paroisse (Loyer, Groupe Électrogène, Soutiens)
                 </span>
-                <span className="text-slate-850">
+                <span className="text-slate-850 dark:text-slate-200">
                   {formatFCFA(stats.totalExpenses)} dépensés / 2 000 000 FCFA autorisé max
                 </span>
               </div>
-              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden">
                 <div 
                   className={`h-full transition-all duration-550 ${stats.totalExpenses > 2000000 ? 'bg-rose-600' : 'bg-amber-500'}`} 
                   style={{ width: `${Math.min(100, (stats.totalExpenses / 2000000) * 100)}%` }}
                 ></div>
               </div>
-              <div className="flex justify-between text-[10px] text-slate-450 mt-1 font-semibold">
+              <div className="flex justify-between text-[10px] text-slate-450 dark:text-slate-500 mt-1 font-semibold">
                 <span>Consommation de l'enveloppe: {Math.round((stats.totalExpenses / 2000000) * 100)}%</span>
                 <span>Seuil d'alerte: 2,0M FCFA</span>
               </div>
@@ -1252,19 +1380,19 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
 
             {/* KPI 3 : Autonomie locale sociale */}
             <div>
-              <div className="flex justify-between font-bold text-slate-700 mb-1.5">
+              <div className="flex justify-between font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 <span>3. Réserve Solidarité / Fonds Social local d'Entre-Aide</span>
                 <span>
                   {formatFCFA(stats.totalRevenues * 0.15)} provisionnés (Objectif: 15% recommandé des contributions)
                 </span>
               </div>
-              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden">
                 <div 
                   className="bg-emerald-600 h-full transition-all duration-550" 
                   style={{ width: '100%' }}
                 ></div>
               </div>
-              <p className="text-[10px] text-slate-450 italic mt-1 leading-relaxed">
+              <p className="text-[10px] text-slate-450 dark:text-slate-500 italic mt-1 leading-relaxed">
                 Recommandation synodale : Conservez au moins 15% de vos recettes pour soutenir les orphelins, veuves et urgences sanitaires locales (Social).
               </p>
             </div>
@@ -1273,11 +1401,266 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
         </div>
       )}
 
+      {/* Tab CONTENT: Bilan Comptable (Balance Sheet) */}
+      {activeTab === 'bilan' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Actif (Assets) */}
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+              <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                Actif (Total Recettes)
+              </h3>
+              <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mb-4">
+                {formatFCFA(bilanData.totalRevenues)}
+              </div>
+              <div className="space-y-2">
+                {REVENUE_KIND.map(cat => (
+                  <div key={cat} className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">{cat}</span>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      {formatFCFA(bilanData.revenueByCategory[cat])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Passif (Liabilities) */}
+            <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+              <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                Passif (Total Dépenses)
+              </h3>
+              <div className="text-2xl font-bold text-rose-700 dark:text-rose-400 mb-4">
+                {formatFCFA(bilanData.totalExpenses)}
+              </div>
+              <div className="space-y-2">
+                {EXPENSE_KIND.map(cat => (
+                  <div key={cat} className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">{cat}</span>
+                    <span className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                      {formatFCFA(bilanData.expenseByCategory[cat])}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Situation Nette (Net Position) */}
+          <div className={`p-6 rounded-xl border-2 shadow-sm ${
+            bilanData.netPosition >= 0
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+              : 'bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-700'
+          }`}>
+            <div className="text-center">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest block">
+                Situation Nette (Trésorerie)
+              </span>
+              <span className={`text-3xl font-bold block mt-2 ${
+                bilanData.netPosition >= 0
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-rose-700 dark:text-rose-400'
+              }`}>
+                {bilanData.netPosition >= 0 ? '+' : ''}{formatFCFA(bilanData.netPosition)}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">
+                {bilanData.netPosition >= 0
+                  ? 'La paroisse est en situation excédentaire — bonne gestion.'
+                  : 'La paroisse est en situation déficitaire — attention au risque de trésorerie.'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab CONTENT: Journal Général (General Journal) */}
+      {activeTab === 'journal' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Search bar */}
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+              <input
+                type="text"
+                placeholder="Rechercher dans le journal (date, catégorie, contributeur...)"
+                value={journalSearch}
+                onChange={(e) => {
+                  setJournalSearch(e.target.value);
+                  setJournalPage(1);
+                }}
+                className="w-full text-xs p-2 border-0 focus:ring-0 bg-transparent text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 outline-hidden"
+              />
+            </div>
+          </div>
+
+          {/* Journal table */}
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                    <th className="p-3">Date</th>
+                    <th className="p-3">Type</th>
+                    <th className="p-3">Catégorie</th>
+                    <th className="p-3 text-right">Montant</th>
+                    <th className="p-3">Contributeur</th>
+                    <th className="p-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {journalPaginated.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500">
+                        Aucune écriture trouvée dans le journal.
+                      </td>
+                    </tr>
+                  ) : (
+                    journalPaginated.map(t => (
+                      <tr key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                        <td className="p-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">{t.date}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                            t.type === 'Revenu'
+                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                          }`}>
+                            {t.type}
+                          </span>
+                        </td>
+                        <td className="p-3 font-medium text-slate-700 dark:text-slate-300">{t.category}</td>
+                        <td className={`p-3 text-right font-bold ${
+                          t.type === 'Revenu' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
+                        }`}>
+                          {t.type === 'Revenu' ? '+' : '-'}{formatFCFA(t.amount)}
+                        </td>
+                        <td className="p-3 text-slate-600 dark:text-slate-400">
+                          {t.contributor || <span className="italic text-slate-400 dark:text-slate-500">Assemblée</span>}
+                        </td>
+                        <td className="p-3 max-w-[200px] truncate text-slate-500 dark:text-slate-400" title={t.notes}>
+                          {t.notes || '—'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
+            <span>{journalPaginated.length} / {journalFiltered.length} écritures affichées</span>
+            {hasMore && (
+              <button
+                onClick={() => setJournalPage(prev => prev + 1)}
+                className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-4 py-2 rounded-lg font-bold transition-all cursor-pointer border border-indigo-200 dark:border-indigo-700"
+              >
+                Voir plus ({journalFiltered.length - journalPaginated.length} restantes)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab CONTENT: Grand Livre (General Ledger) */}
+      {activeTab === 'grandlivre' && (
+        <div className="space-y-3 animate-fade-in">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Transactions groupées par catégorie comptable. Cliquez sur une catégorie pour développer les écritures.
+          </p>
+          {[...REVENUE_KIND, ...EXPENSE_KIND].map(cat => {
+            const data = grandLivreData[cat];
+            if (!data || data.transactions.length === 0) return null;
+            const isExpanded = expandedCategories[cat] || false;
+            const isRevenue = data.type === 'Revenu';
+            let runningBalance = 0;
+
+            return (
+              <div key={cat} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden shadow-xs">
+                {/* Category header (accordion trigger) */}
+                <button
+                  onClick={() => toggleCategory(cat)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-all cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isRevenue ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                    <div>
+                      <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{cat}</span>
+                      <span className={`text-[10px] ml-2 font-semibold ${isRevenue ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        ({data.transactions.length} écriture{data.transactions.length > 1 ? 's' : ''})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`font-bold text-sm ${isRevenue ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                      {isRevenue ? '+' : '-'}{formatFCFA(data.total)}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="border-t border-slate-100 dark:border-slate-700 overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                          <th className="p-2.5 pl-4">Date</th>
+                          <th className="p-2.5 text-right">Montant</th>
+                          <th className="p-2.5">Contributeur</th>
+                          <th className="p-2.5 pr-4 text-right">Solde cumulé</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {data.transactions.map(t => {
+                          runningBalance += Number(t.amount) || 0;
+                          return (
+                            <tr key={t.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-700/40 transition-colors">
+                              <td className="p-2.5 pl-4 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">{t.date}</td>
+                              <td className={`p-2.5 text-right font-bold ${
+                                isRevenue ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+                              }`}>
+                                {isRevenue ? '+' : '-'}{formatFCFA(t.amount)}
+                              </td>
+                              <td className="p-2.5 text-slate-600 dark:text-slate-400">
+                                {t.contributor || <span className="italic text-slate-400 dark:text-slate-500">Assemblée</span>}
+                              </td>
+                              <td className={`p-2.5 pr-4 text-right font-bold ${
+                                isRevenue ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+                              }`}>
+                                {formatFCFA(runningBalance)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {[...REVENUE_KIND, ...EXPENSE_KIND].every(cat => !grandLivreData[cat] || grandLivreData[cat].transactions.length === 0) && (
+            <div className="text-center py-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-400 dark:text-slate-500">
+              <ListFilter className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-sm">Aucune transaction enregistrée dans le Grand Livre.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Small informative advice tooltip in Congo context */}
-      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-start gap-2.5 text-xs text-slate-600 mt-2">
-        <Info className="w-4 h-4 text-indigo-505 mt-0.5 shrink-0" />
+      <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-600 p-3.5 rounded-xl flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-400 mt-2">
+        <Info className="w-4 h-4 text-indigo-505 dark:text-indigo-400 mt-0.5 shrink-0" />
         <div className="space-y-1">
-          <span className="font-bold text-slate-800 text-[11px] block">Ratios d'évaluation monétaire & Trésorerie d'Église :</span>
+          <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px] block">Ratios d'évaluation monétaire & Trésorerie d'Église :</span>
           <p className="leading-relaxed text-[10.5px]">
             Toutes les valeurs affichées ci-haut respectent scrupuleusement la monnaie locale (Franc CFA - CEMAC) en République du Congo. Assurez-vous d'entrer des montants ronds lors de la saisie (sans virgule) car le Franc CFA n'utilise plus de fractions centimales en comptabilité physique.
           </p>

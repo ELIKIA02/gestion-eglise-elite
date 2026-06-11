@@ -101,6 +101,39 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   const printRef = useRef<HTMLDivElement>(null);
   const doc = DOC_TYPES.find(d => d.id === docType)!;
 
+  const downloadPDF = () => {
+    if (!printRef.current) return;
+    const content = printRef.current.innerHTML;
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print { body { margin: 0; padding: 20px; } }
+</style>
+</head><body>${content}</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframe.src = url;
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 2000);
+        }, 500);
+      };
+    } catch {
+      const w = window.open(url, '_blank');
+      if (w) { w.focus(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    }
+  };
+
   useEffect(() => { setFields({}); setRef(generateRef()); setLignes([{ id: genId(), description: '', quantite: 1, prixUnitaire: 0 }]); setPreview(false); }, [docType]);
 
   const set = (k: string, v: string) => setFields(prev => ({ ...prev, [k]: v }));
@@ -118,144 +151,166 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
   const totalDevis = lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
 
+  const S = {
+    doc: { fontFamily: "'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", color: '#1e293b', maxWidth: '800px', margin: '0 auto', padding: '30px', background: '#fff' } as React.CSSProperties,
+    header: { display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '16px', borderBottom: '3px solid #4f46e5', marginBottom: '24px' } as React.CSSProperties,
+    headerLogo: { width: '48px', height: '48px', objectFit: 'contain' } as React.CSSProperties,
+    headerText: { flex: 1 } as React.CSSProperties,
+    headerName: { fontSize: '16pt', fontWeight: 'bold', color: '#1e293b', margin: 0, lineHeight: 1.3 } as React.CSSProperties,
+    headerSub: { fontSize: '7.5pt', color: '#64748b', whiteSpace: 'pre-wrap', margin: '2px 0 0', lineHeight: 1.4 } as React.CSSProperties,
+    title: { textAlign: 'center', fontSize: '14pt', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '3px', margin: '0 0 4px' } as React.CSSProperties,
+    ref: { textAlign: 'center', fontSize: '8pt', color: '#94a3b8', marginBottom: '20px', fontFamily: "'Courier New', monospace" } as React.CSSProperties,
+    infoBar: { display: 'flex', justifyContent: 'space-between', fontSize: '9pt', color: '#475569', marginBottom: '20px', padding: '10px 14px', background: '#f8fafc', borderRadius: '6px' } as React.CSSProperties,
+    infoLabel: { color: '#64748b' } as React.CSSProperties,
+    infoVal: { fontWeight: 'bold', color: '#1e293b' } as React.CSSProperties,
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '9pt', marginBottom: '16px', borderRadius: '6px', overflow: 'hidden' } as React.CSSProperties,
+    th: { padding: '8px 10px', textAlign: 'left', background: '#4f46e5', color: '#fff', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' } as React.CSSProperties,
+    td: { padding: '7px 10px', borderBottom: '1px solid #e2e8f0' } as React.CSSProperties,
+    totalRow: { background: '#eef2ff', fontWeight: 'bold' } as React.CSSProperties,
+    totalLabel: { padding: '8px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontSize: '9pt' } as React.CSSProperties,
+    totalVal: { padding: '8px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontSize: '11pt', color: '#4f46e5', fontWeight: 'bold' } as React.CSSProperties,
+    signature: { display: 'flex', justifyContent: 'space-between', marginTop: '36px', fontSize: '8pt', color: '#475569' } as React.CSSProperties,
+    sigBlock: { textAlign: 'center', width: '200px' } as React.CSSProperties,
+    sigLine: { borderTop: '1px solid #94a3b8', paddingTop: '4px', marginTop: '4px' } as React.CSSProperties,
+    cachetImg: { width: '76px', marginBottom: '4px', display: 'block', marginLeft: 'auto', marginRight: 'auto' } as React.CSSProperties,
+    bodyText: { fontSize: '10pt', lineHeight: '2', textAlign: 'justify', color: '#334155' } as React.CSSProperties,
+    nameHighlight: { textAlign: 'center', fontSize: '12pt', fontWeight: 'bold', color: '#4f46e5', margin: '16px 0', padding: '10px', background: '#eef2ff', borderRadius: '6px' } as React.CSSProperties,
+    recuBorder: { border: '2px solid #4f46e5', borderRadius: '12px', padding: '24px', background: 'linear-gradient(135deg, #fff 0%, #f8faff 100%)' } as React.CSSProperties,
+    recuMontant: { fontSize: '16pt', fontWeight: 'bold', color: '#4f46e5', textAlign: 'right' as any } as React.CSSProperties,
+    footer: { textAlign: 'center', fontSize: '7pt', color: '#cbd5e1', marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' } as React.CSSProperties,
+  };
+
   const renderDocument = () => {
     const appName = settings?.appName || "Gestion d'Église Élite";
     const logo = settings?.appLogo || '†';
     const header = settings?.reportHeader || appName;
     const isImage = logo.startsWith('data:image');
 
+    const HeaderBlock = () => (
+      <div style={S.header}>
+        {isImage ? <img src={logo} alt="" style={S.headerLogo} /> : <span style={{ fontSize: '28px' }}>{logo}</span>}
+        <div style={S.headerText}>
+          <div style={S.headerName}>{appName}</div>
+          <div style={S.headerSub}>{header}</div>
+        </div>
+      </div>
+    );
+
+    const CachetBlock = () => settings?.cachetBase64
+      ? <img src={settings.cachetBase64} alt="Cachet" style={S.cachetImg} />
+      : null;
+
     if (docType === 'devis') {
       return (
-        <div style={{ fontFamily: "'Calibri', Arial, sans-serif", color: '#1e293b', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-          {/* En-tête */}
-          <div style={{ textAlign: 'center', borderBottom: '3px double #4f46e5', paddingBottom: '12px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '6px' }}>
-              {isImage ? <img src={logo} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain' }} /> : <span style={{ fontSize: '28px' }}>{logo}</span>}
-              <span style={{ fontSize: '18pt', fontWeight: 'bold', color: '#4f46e5' }}>{appName}</span>
-            </div>
-            <div style={{ fontSize: '9pt', color: '#64748b', whiteSpace: 'pre-wrap', maxWidth: '500px', margin: '0 auto' }}>{header}</div>
+        <div style={S.doc}>
+          <HeaderBlock />
+          <div style={S.title}>Devis</div>
+          <div style={S.ref}>{ref}</div>
+          <div style={S.infoBar}>
+            <span><span style={S.infoLabel}>Client : </span><span style={S.infoVal}>{fields.client || '—'}</span></span>
+            <span><span style={S.infoLabel}>Date : </span><span style={S.infoVal}>{formatDate(fields.date || new Date().toISOString().slice(0, 10))}</span></span>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '10pt' }}>
-            <div><strong>Devis N° :</strong> {ref}</div>
-            <div><strong>Date :</strong> {formatDate(fields.date || new Date().toISOString().slice(0, 10))}</div>
-          </div>
-
-          {fields.client && <div style={{ marginBottom: '16px', fontSize: '10pt' }}><strong>Client :</strong> {fields.client}</div>}
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', marginBottom: '16px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#4f46e5', color: '#fff' }}>
-                <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #cbd5e1' }}>N°</th>
-                <th style={{ padding: '8px', textAlign: 'left', border: '1px solid #cbd5e1' }}>Description</th>
-                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1' }}>Qté</th>
-                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1' }}>Prix unitaire</th>
-                <th style={{ padding: '8px', textAlign: 'right', border: '1px solid #cbd5e1' }}>Total</th>
-              </tr>
-            </thead>
+          <table style={S.table}>
+            <thead><tr>
+              <th style={{ ...S.th, width: '40px', textAlign: 'center' }}>N°</th>
+              <th style={S.th}>Description</th>
+              <th style={{ ...S.th, width: '60px', textAlign: 'right' }}>Qté</th>
+              <th style={{ ...S.th, width: '100px', textAlign: 'right' }}>Prix unitaire</th>
+              <th style={{ ...S.th, width: '100px', textAlign: 'right' }}>Total</th>
+            </tr></thead>
             <tbody>
               {lignes.filter(l => l.description).map((l, i) => (
                 <tr key={l.id}>
-                  <td style={{ padding: '6px 8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>{i + 1}</td>
-                  <td style={{ padding: '6px 8px', border: '1px solid #e2e8f0' }}>{l.description}</td>
-                  <td style={{ padding: '6px 8px', border: '1px solid #e2e8f0', textAlign: 'right' }}>{l.quantite}</td>
-                  <td style={{ padding: '6px 8px', border: '1px solid #e2e8f0', textAlign: 'right' }}>{formatNumber(l.prixUnitaire)} FCFA</td>
-                  <td style={{ padding: '6px 8px', border: '1px solid #e2e8f0', textAlign: 'right' }}>{formatNumber(l.quantite * l.prixUnitaire)} FCFA</td>
+                  <td style={{ ...S.td, textAlign: 'center' }}>{i + 1}</td>
+                  <td style={S.td}>{l.description}</td>
+                  <td style={{ ...S.td, textAlign: 'right' }}>{l.quantite}</td>
+                  <td style={{ ...S.td, textAlign: 'right' }}>{formatNumber(l.prixUnitaire)} FCFA</td>
+                  <td style={{ ...S.td, textAlign: 'right', fontWeight: 'bold' }}>{formatNumber(l.quantite * l.prixUnitaire)} FCFA</td>
                 </tr>
               ))}
-              <tr style={{ fontWeight: 'bold', backgroundColor: '#f8fafc' }}>
-                <td colSpan={4} style={{ padding: '8px', border: '1px solid #e2e8f0', textAlign: 'right' }}>TOTAL</td>
-                <td style={{ padding: '8px', border: '1px solid #e2e8f0', textAlign: 'right', color: '#4f46e5' }}>{formatNumber(totalDevis)} FCFA</td>
+              <tr style={S.totalRow}>
+                <td colSpan={4} style={S.totalLabel}>TOTAL</td>
+                <td style={S.totalVal}>{formatNumber(totalDevis)} FCFA</td>
               </tr>
             </tbody>
           </table>
-
-          {fields.validite && <div style={{ fontSize: '9pt', color: '#64748b', marginBottom: '16px' }}>Validité : {fields.validite} jours</div>}
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '40px', fontSize: '10pt' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Signature</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '80px', marginBottom: '4px' }} /> : null}
-              <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Cachet et signature</div>
-            </div>
+          {fields.validite && <div style={{ fontSize: '8pt', color: '#64748b', marginBottom: '12px' }}>Validité : {fields.validite} jours</div>}
+          <div style={S.signature}>
+            <div style={S.sigBlock}><div style={S.sigLine}>Signature</div></div>
+            <div style={S.sigBlock}><CachetBlock /><div style={S.sigLine}>Cachet</div></div>
           </div>
+          <div style={S.footer}>Document généré le {new Date().toLocaleDateString('fr-FR')} · {ref}</div>
         </div>
       );
     }
 
     if (docType === 'recu') {
       const montant = parseInt(fields.montant || '0');
+      const typeRecu = fields.type || 'Dîme';
       return (
-        <div style={{ fontFamily: "'Calibri', Arial, sans-serif", color: '#1e293b', maxWidth: '600px', margin: '0 auto', padding: '20px', border: '2px solid #1e293b' }}>
-          <div style={{ textAlign: 'center', borderBottom: '2px solid #1e293b', paddingBottom: '10px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
-              {isImage ? <img src={logo} alt="" style={{ width: '32px' }} /> : <span style={{ fontSize: '24px' }}>{logo}</span>}
-              <span style={{ fontSize: '16pt', fontWeight: 'bold' }}>{appName}</span>
+        <div style={S.doc}>
+          <div style={S.recuBorder}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {isImage ? <img src={logo} alt="" style={{ width: '40px' }} /> : <span style={{ fontSize: '24px' }}>{logo}</span>}
+                <div>
+                  <div style={{ fontSize: '12pt', fontWeight: 'bold', color: '#1e293b' }}>{appName}</div>
+                  <div style={{ fontSize: '7pt', color: '#64748b' }}>{header}</div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '8pt', color: '#64748b' }}>N° {ref}</div>
+                <div style={{ fontSize: '8pt', color: '#64748b' }}>{formatDate(fields.date || new Date().toISOString().slice(0, 10))}</div>
+              </div>
             </div>
-            <div style={{ fontSize: '8pt', color: '#64748b', whiteSpace: 'pre-wrap' }}>{header}</div>
-          </div>
-          <h2 style={{ textAlign: 'center', fontSize: '14pt', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '2px' }}>Reçu de {fields.type || 'Dîme'}</h2>
-          <table style={{ width: '100%', fontSize: '10pt', lineHeight: '2' }}>
-            <tbody>
-              <tr><td style={{ fontWeight: 'bold', width: '140px' }}>Référence :</td><td>{ref}</td></tr>
-              <tr><td style={{ fontWeight: 'bold' }}>Date :</td><td>{formatDate(fields.date || new Date().toISOString().slice(0, 10))}</td></tr>
-              <tr><td style={{ fontWeight: 'bold' }}>Donateur :</td><td>{fields.donateur || '______________________'}</td></tr>
-              <tr><td style={{ fontWeight: 'bold' }}>Montant :</td><td style={{ fontSize: '12pt', fontWeight: 'bold', color: '#4f46e5' }}>{montant ? formatNumber(montant) : '______'} FCFA</td></tr>
-              <tr><td style={{ fontWeight: 'bold' }}>Mois :</td><td>{fields.mois || '______________________'}</td></tr>
-            </tbody>
-          </table>
-          {fields.notes && <div style={{ marginTop: '12px', fontSize: '9pt', fontStyle: 'italic', color: '#64748b' }}>{fields.notes}</div>}
-          <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
-            <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '180px' }}>Signature du donateur</div></div>
-            <div style={{ textAlign: 'center' }}>
-              {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '70px', marginBottom: '4px' }} /> : null}
-              <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '180px' }}>Cachet de l'église</div>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '3px', color: '#4f46e5', fontWeight: 'bold' }}>Reçu de {typeRecu}</div>
+              <div style={S.recuMontant}>{montant ? formatNumber(montant) : '______'} FCFA</div>
+            </div>
+            <table style={{ width: '100%', fontSize: '9pt', lineHeight: '2.2', borderCollapse: 'collapse' }}>
+              <tbody>
+                <tr><td style={{ color: '#64748b', width: '120px' }}>Donateur</td><td style={{ fontWeight: 'bold', borderBottom: '1px dashed #cbd5e1' }}>{fields.donateur || '______________________'}</td></tr>
+                <tr><td style={{ color: '#64748b' }}>Mois concerné</td><td style={{ fontWeight: 'bold', borderBottom: '1px dashed #cbd5e1' }}>{fields.mois || '______________________'}</td></tr>
+                <tr><td style={{ color: '#64748b' }}>Montant en lettres</td><td style={{ fontStyle: 'italic', borderBottom: '1px dashed #cbd5e1' }}>{montant ? `${formatNumber(montant)} francs CFA` : '______________________'}</td></tr>
+              </tbody>
+            </table>
+            {fields.notes && <div style={{ marginTop: '10px', fontSize: '8pt', fontStyle: 'italic', color: '#64748b' }}>Note : {fields.notes}</div>}
+            <div style={S.signature}>
+              <div style={S.sigBlock}><div style={S.sigLine}>Signature du donateur</div></div>
+              <div style={S.sigBlock}><CachetBlock /><div style={S.sigLine}>Cachet de l'église</div></div>
             </div>
           </div>
+          <div style={S.footer}>Document généré le {new Date().toLocaleDateString('fr-FR')} · {ref}</div>
         </div>
       );
     }
 
-    // Certificat / Attestation
     const isAttestation = docType === 'attestation';
     return (
-      <div style={{ fontFamily: "'Calibri', Arial, sans-serif", color: '#1e293b', maxWidth: '700px', margin: '0 auto', padding: '40px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '6px' }}>
-            {isImage ? <img src={logo} alt="" style={{ width: '40px' }} /> : <span style={{ fontSize: '28px' }}>{logo}</span>}
-            <span style={{ fontSize: '18pt', fontWeight: 'bold' }}>{appName}</span>
-          </div>
-          <div style={{ fontSize: '9pt', color: '#64748b', whiteSpace: 'pre-wrap' }}>{header}</div>
+      <div style={S.doc}>
+        <HeaderBlock />
+        <div style={S.title}>{isAttestation ? 'Attestation' : 'Certificat'}</div>
+        <div style={S.ref}>{ref}</div>
+        <div style={S.infoBar}>
+          <span><span style={S.infoLabel}>Bénéficiaire : </span><span style={S.infoVal}>{fields.nom || '—'}</span></span>
+          <span><span style={S.infoLabel}>Type : </span><span style={S.infoVal}>{fields.type || '—'}</span></span>
         </div>
-
-        <h2 style={{ textAlign: 'center', fontSize: '16pt', textTransform: 'uppercase', letterSpacing: '3px', margin: '0 0 8px', color: '#4f46e5' }}>
-          {isAttestation ? "Attestation" : "Certificat"}
-        </h2>
-        <div style={{ textAlign: 'center', fontSize: '9pt', color: '#64748b', marginBottom: '24px' }}>{ref}</div>
-
-        <div style={{ fontSize: '10pt', lineHeight: '2', textAlign: 'justify' }}>
+        <div style={S.bodyText}>
           <p>Je soussigné, représentant légal de <strong>{appName}</strong>, certifie que :</p>
-          <p style={{ textAlign: 'center', fontSize: '11pt', margin: '16px 0' }}>
-            <strong>{fields.nom || '______________________'}</strong>
+          <div style={S.nameHighlight}>{fields.nom || '______________________'}</div>
+          <p>
+            {isAttestation
+              ? `a participé / été présent(e) au titre de ${fields.type || '...'} au sein de notre église.`
+              : `est membre de notre église au titre de ${fields.type || '...'}.`}
           </p>
-          {isAttestation ? (
-            <p>a participé / été présent(e) au titre de <strong>{fields.type || '...'}</strong> au sein de notre église.</p>
-          ) : (
-            <p>est membre de notre église au titre de <strong>{fields.type || '...'}</strong>.</p>
-          )}
           <p>Fait à Brazzaville, le {formatDate(fields.date || new Date().toISOString().slice(0, 10))}.</p>
-          {fields.texte && <p style={{ fontStyle: 'italic', marginTop: '12px' }}>{fields.texte}</p>}
+          {fields.texte && <p style={{ fontStyle: 'italic', marginTop: '12px', color: '#475569' }}>« {fields.texte} »</p>}
         </div>
-
-        <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
-          <div style={{ textAlign: 'center' }}><div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Signature du bénéficiaire</div></div>
-          <div style={{ textAlign: 'center' }}>
-            {settings?.cachetBase64 ? <img src={settings.cachetBase64} alt="Cachet" style={{ width: '80px', marginBottom: '4px' }} /> : null}
-            <div style={{ borderTop: '1px solid #1e293b', paddingTop: '4px', width: '200px' }}>Cachet et signature du pasteur</div>
-          </div>
+        <div style={S.signature}>
+          <div style={S.sigBlock}><div style={S.sigLine}>Signature du bénéficiaire</div></div>
+          <div style={S.sigBlock}><CachetBlock /><div style={S.sigLine}>Cachet et signature</div></div>
         </div>
+        <div style={S.footer}>Document généré le {new Date().toLocaleDateString('fr-FR')} · {ref}</div>
       </div>
     );
   };
@@ -361,9 +416,13 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
                 className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 px-3 py-1.5 border border-slate-200 rounded-lg cursor-pointer">
                 <X className="w-3.5 h-3.5" /> Modifier
               </button>
+              <button onClick={downloadPDF}
+                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all min-h-[44px]">
+                <Download className="w-3.5 h-3.5" /> Télécharger PDF
+              </button>
               <button onClick={() => window.print()}
-                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all">
-                <Printer className="w-3.5 h-3.5" /> Imprimer / PDF
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all min-h-[44px]">
+                <Printer className="w-3.5 h-3.5" /> Imprimer
               </button>
             </div>
           </div>

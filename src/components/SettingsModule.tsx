@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, setDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { ChurchSettings } from '../types';
-import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2, Download, UploadCloud } from 'lucide-react';
+import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2, Download, UploadCloud, Sun, Moon, Bell, Cloud, Globe, Smartphone } from 'lucide-react';
 
 interface SettingsModuleProps {
   settings: ChurchSettings | null;
@@ -18,6 +18,12 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   const [reportHeader, setReportHeader] = useState('');
   const [mistralApiKey, setMistralApiKey] = useState('');
   const [cachetBase64, setCachetBase64] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [notifBirthdayReminder, setNotifBirthdayReminder] = useState(true);
+  const [notifEventReminder, setNotifEventReminder] = useState(true);
+  const [notifLowBalanceAlert, setNotifLowBalanceAlert] = useState(true);
+  const [notifAttendanceAlert, setNotifAttendanceAlert] = useState(true);
+  const [notifReminderDays, setNotifReminderDays] = useState(3);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -69,6 +75,12 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setReportHeader(settings.reportHeader || "ÉGLISE ÉVANGÉLIQUE DE LA GRÂCE\nSecrétariat Général et Trésorerie\nB.P. 2480 - Tel: +242 06 123 4567 • Brazzaville, Congo");
       setMistralApiKey(settings.mistralApiKey || '');
       setCachetBase64(settings.cachetBase64 || '');
+      setTheme(settings.theme || 'light');
+      setNotifBirthdayReminder(settings.notifications?.birthdayReminder ?? true);
+      setNotifEventReminder(settings.notifications?.eventReminder ?? true);
+      setNotifLowBalanceAlert(settings.notifications?.lowBalanceAlert ?? true);
+      setNotifAttendanceAlert(settings.notifications?.attendanceAlert ?? true);
+      setNotifReminderDays(settings.notifications?.reminderDays ?? 3);
     }
   }, [settings]);
 
@@ -99,6 +111,14 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
         reportHeader: reportHeader.trim(),
         mistralApiKey: mistralApiKey.trim(),
         cachetBase64: cachetBase64.trim(),
+        theme: theme,
+        notifications: {
+          birthdayReminder: notifBirthdayReminder,
+          eventReminder: notifEventReminder,
+          lowBalanceAlert: notifLowBalanceAlert,
+          attendanceAlert: notifAttendanceAlert,
+          reminderDays: notifReminderDays,
+        },
         updatedAt: new Date().toISOString()
       });
 
@@ -126,6 +146,12 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setReportHeader("ÉGLISE ÉVANGÉLIQUE DE LA GRÂCE\nSecrétariat Général et Trésorerie\nB.P. 2480 - Tel: +242 06 123 4567 • Brazzaville, Congo");
       setMistralApiKey('');
       setCachetBase64('');
+      setTheme('light');
+      setNotifBirthdayReminder(true);
+      setNotifEventReminder(true);
+      setNotifLowBalanceAlert(true);
+      setNotifAttendanceAlert(true);
+      setNotifReminderDays(3);
     }
   };
 
@@ -365,6 +391,84 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
             </div>
           </div>
 
+          {/* Theme Configuration */}
+          <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-200/65 space-y-4 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-600" /> : <Sun className="w-4 h-4 text-amber-600" />}
+              Apparence & Thème
+            </h3>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setTheme('light')}
+                className={`flex items-center gap-2 px-5 py-3 rounded-lg text-xs font-semibold cursor-pointer transition-all border-2 ${
+                  theme === 'light'
+                    ? 'border-amber-500 bg-amber-50 text-amber-800'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Sun className="w-4 h-4" />
+                Mode Clair
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme('dark')}
+                className={`flex items-center gap-2 px-5 py-3 rounded-lg text-xs font-semibold cursor-pointer transition-all border-2 ${
+                  theme === 'dark'
+                    ? 'border-indigo-500 bg-slate-800 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                }`}
+              >
+                <Moon className="w-4 h-4" />
+                Mode Sombre
+              </button>
+            </div>
+            <span className="text-[10px] text-slate-400 block">Le thème sombre réduit la fatigue oculaire et économise la batterie sur les appareils mobiles.</span>
+          </div>
+
+          {/* Notification Settings */}
+          <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-200/65 space-y-4 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-rose-600" />
+              Notifications & Rappels
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                <span className="text-xs font-medium text-slate-700">Rappel d'anniversaire</span>
+                <input type="checkbox" checked={notifBirthdayReminder}
+                  onChange={(e) => setNotifBirthdayReminder(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              </label>
+              <label className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                <span className="text-xs font-medium text-slate-700">Rappel d'événement</span>
+                <input type="checkbox" checked={notifEventReminder}
+                  onChange={(e) => setNotifEventReminder(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              </label>
+              <label className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                <span className="text-xs font-medium text-slate-700">Alerte solde faible</span>
+                <input type="checkbox" checked={notifLowBalanceAlert}
+                  onChange={(e) => setNotifLowBalanceAlert(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              </label>
+              <label className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
+                <span className="text-xs font-medium text-slate-700">Alerte baisse assistance</span>
+                <input type="checkbox" checked={notifAttendanceAlert}
+                  onChange={(e) => setNotifAttendanceAlert(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-[11px] font-bold text-slate-650 uppercase tracking-wider shrink-0">
+                Jrs d'anticipation
+              </label>
+              <input type="number" min={1} max={30} value={notifReminderDays}
+                onChange={(e) => setNotifReminderDays(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white text-center font-bold" />
+              <span className="text-[10px] text-slate-400">jours avant l'événement/anniversaire</span>
+            </div>
+          </div>
+
           {/* Action buttons */}
           <div className="flex items-center gap-3 pt-2">
             <button
@@ -480,9 +584,14 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           <button
             type="button"
             onClick={() => {
-              const raw = localStorage.getItem('church_db_data');
-              if (!raw) { alert('Aucune donnée à exporter.'); return; }
-              const blob = new Blob([raw], { type: 'application/json' });
+              const db = localStorage.getItem('church_db_data');
+              const ens = localStorage.getItem('church_enseignements');
+              if (!db && !ens) { alert('Aucune donnée à exporter.'); return; }
+              const payload = JSON.stringify({
+                church_db_data: db ? JSON.parse(db) : null,
+                church_enseignements: ens ? JSON.parse(ens) : null
+              });
+              const blob = new Blob([payload], { type: 'application/json' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
@@ -511,7 +620,13 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                   try {
                     const data = JSON.parse(ev.target?.result as string);
                     if (typeof data !== 'object') throw new Error('Format invalide');
-                    localStorage.setItem('church_db_data', JSON.stringify(data));
+                    // Compatibilité : ancien format (direct) ou nouveau (emballé)
+                    if (data.church_db_data || data.church_enseignements) {
+                      if (data.church_db_data) localStorage.setItem('church_db_data', JSON.stringify(data.church_db_data));
+                      if (data.church_enseignements) localStorage.setItem('church_enseignements', JSON.stringify(data.church_enseignements));
+                    } else {
+                      localStorage.setItem('church_db_data', JSON.stringify(data));
+                    }
                     alert('Données importées avec succès ! La page va se recharger.');
                     window.location.reload();
                   } catch {
@@ -522,6 +637,140 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
               }}
             />
           </label>
+        </div>
+      </div>
+
+      {/* Sauvegarde Cloud */}
+      <div className="border-t border-slate-200 pt-6 mt-4">
+        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-4">
+          <Cloud className="w-4 h-4 text-sky-600" />
+          Synchronisation & Sauvegarde Cloud
+        </h3>
+        <p className="text-[11px] text-slate-500 mb-4">
+          Sauvegardez vos données sur le cloud pour les retrouver sur n'importe quel appareil.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Google Drive */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-200">
+                <Globe className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-800 block">Google Drive</span>
+                <span className="text-[10px] text-slate-400">Sauvegarde cloud Google</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const db = localStorage.getItem('church_db_data');
+                const ens = localStorage.getItem('church_enseignements');
+                if (!db && !ens) { alert('Aucune donnée à sauvegarder.'); return; }
+                const payload = JSON.stringify({
+                  church_db_data: db ? JSON.parse(db) : null,
+                  church_enseignements: ens ? JSON.parse(ens) : null
+                });
+                const blob = new Blob([payload], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `eglise-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                window.open('https://drive.google.com/drive/my-drive', '_blank');
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-blue-500"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              Sauvegarder sur Drive
+            </button>
+            <p className="text-[9px] text-slate-400 leading-relaxed">
+              Télécharge le fichier puis déposez-le dans Google Drive ouvert dans un nouvel onglet.
+            </p>
+          </div>
+
+          {/* OneDrive */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center border border-sky-200">
+                <Cloud className="w-5 h-5 text-sky-600" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-800 block">Microsoft OneDrive</span>
+                <span className="text-[10px] text-slate-400">Sauvegarde cloud Microsoft</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const db = localStorage.getItem('church_db_data');
+                const ens = localStorage.getItem('church_enseignements');
+                if (!db && !ens) { alert('Aucune donnée à sauvegarder.'); return; }
+                const payload = JSON.stringify({
+                  church_db_data: db ? JSON.parse(db) : null,
+                  church_enseignements: ens ? JSON.parse(ens) : null
+                });
+                const blob = new Blob([payload], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `eglise-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                window.open('https://onedrive.live.com', '_blank');
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-sky-500"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              Sauvegarder sur OneDrive
+            </button>
+            <p className="text-[9px] text-slate-400 leading-relaxed">
+              Télécharge le fichier puis déposez-le dans OneDrive ouvert dans un nouvel onglet.
+            </p>
+          </div>
+
+          {/* Serveur local */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-200">
+                <Smartphone className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <span className="text-sm font-bold text-slate-800 block">Sync Serveur</span>
+                <span className="text-[10px] text-slate-400">Synchronisation automatique</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const db = localStorage.getItem('church_db_data');
+                  const ens = localStorage.getItem('church_enseignements');
+                  if (!db && !ens) { alert('Aucune donnée.'); return; }
+                  const data: any = {};
+                  if (db) Object.assign(data, JSON.parse(db));
+                  if (ens) data['church_enseignements'] = JSON.parse(ens);
+                  const res = await fetch('/api/data/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                  });
+                  if (res.ok) alert('Données synchronisées avec le serveur !');
+                  else alert('Erreur de synchronisation.');
+                } catch {
+                  alert('Impossible de contacter le serveur.');
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-emerald-500"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Synchroniser maintenant
+            </button>
+            <p className="text-[9px] text-slate-400 leading-relaxed">
+              Synchronise les données avec le serveur local. Les données sont automatiquement sauvegardées à chaque modification.
+            </p>
+          </div>
         </div>
       </div>
     </div>

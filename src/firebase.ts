@@ -30,10 +30,16 @@ let syncTimer: any = null;
 function syncToServer(data: Record<string, any[]>) {
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
+    // Include church_enseignements in server sync
+    const payload = { ...data };
+    try {
+      const ens = localStorage.getItem('church_enseignements');
+      if (ens) payload['church_enseignements'] = JSON.parse(ens);
+    } catch {}
     fetch(`${getApiBase()}/api/data/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     }).catch(() => {});
   }, 500);
 }
@@ -44,6 +50,10 @@ export async function loadFromServer(): Promise<boolean> {
     const json = await res.json();
     if (json.success && json.data) {
       localStorage.setItem(DB_KEY, JSON.stringify(json.data));
+      // Restore church_enseignements if present in server data
+      if (json.data.church_enseignements) {
+        localStorage.setItem('church_enseignements', JSON.stringify(json.data.church_enseignements));
+      }
       return true;
     }
   } catch {}

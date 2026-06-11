@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, Send, FileText, Printer, Sparkles, TrendingUp, TrendingDown, Lightbulb, AlertTriangle, CheckCircle2, Target, BarChart3 } from 'lucide-react';
+import { Loader2, Send, FileText, Download, Sparkles, TrendingUp, TrendingDown, Lightbulb, AlertTriangle, CheckCircle2, Target, BarChart3 } from 'lucide-react';
 import { ChurchSettings, Member, FinanceTransaction, ChurchEvent } from '../types';
 
 interface ChurchReportModuleProps {
@@ -415,30 +415,74 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
   li.bullet { list-style-type: disc; }
   li.num { list-style-type: decimal; }
 
-  /* Status blocks */
+  /* Status blocks — instructive colors */
   .strength {
     color: #059669;
     font-weight: bold;
     margin: 4px 0 4px 12px;
-    padding: 2px 0;
+    padding: 3px 10px;
+    background: #ecfdf5;
+    border-left: 4px solid #059669;
+    border-radius: 4px;
   }
   .weakness {
     color: #d97706;
     font-weight: bold;
     margin: 4px 0 4px 12px;
-    padding: 2px 0;
+    padding: 3px 10px;
+    background: #fffbeb;
+    border-left: 4px solid #d97706;
+    border-radius: 4px;
   }
   .recommend {
     color: #6366f1;
     font-weight: bold;
     margin: 4px 0 4px 12px;
-    padding: 2px 0;
+    padding: 3px 10px;
+    background: #eef2ff;
+    border-left: 4px solid #6366f1;
+    border-radius: 4px;
   }
   .target {
     color: #0891b2;
     font-weight: bold;
     margin: 4px 0 4px 12px;
-    padding: 2px 0;
+    padding: 3px 10px;
+    background: #ecfeff;
+    border-left: 4px solid #0891b2;
+    border-radius: 4px;
+  }
+
+  /* Verse / citation block */
+  .verse {
+    color: #7c3aed;
+    font-style: italic;
+    margin: 8px 0 8px 24px;
+    padding: 8px 14px;
+    background: #f5f3ff;
+    border-left: 4px solid #7c3aed;
+    border-radius: 4px;
+    font-size: 10pt;
+  }
+
+  /* Highlight / important */
+  .highlight {
+    background: #fef9c3;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: bold;
+    color: #854d0e;
+  }
+
+  /* Key metric callout */
+  .metric {
+    display: inline-block;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: #fff;
+    font-weight: bold;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10pt;
   }
 
   /* Tables */
@@ -448,18 +492,20 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
     margin: 12px 0;
     font-size: 10pt;
     border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
   }
   table.church-table thead th {
-    background-color: #4f46e5;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
     color: #ffffff;
     font-weight: bold;
-    padding: 7px 10px;
+    padding: 8px 12px;
     text-align: left;
-    border: 1px solid #3730a3;
+    border: none;
   }
   table.church-table tbody td {
-    padding: 5px 10px;
-    border: 1px solid #cbd5e1;
+    padding: 6px 12px;
+    border-bottom: 1px solid #e2e8f0;
     vertical-align: top;
   }
   table.church-table tbody tr.even td {
@@ -468,14 +514,18 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
   table.church-table tbody tr.odd td {
     background-color: #ffffff;
   }
+  table.church-table tbody tr:hover td {
+    background-color: #eef2ff;
+  }
 
   /* Inline code */
   code {
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 9.5pt;
     background-color: #f1f5f9;
-    padding: 1px 4px;
-    border-radius: 2px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #be123c;
   }
 
   /* Footer */
@@ -512,7 +562,6 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
 ${content}
 
 <div class="report-footer">
-  Document confidentiel — Généré par l'Assistant IA (Mistral)<br/>
   ${churchName} — ${dateStr}
 </div>
 
@@ -562,17 +611,21 @@ ${content}
   li.bullet { list-style-type: disc; }
   li.num { list-style-type: decimal; }
 
-  .strength { color: #059669; font-weight: bold; margin: 4px 0 4px 12px; padding: 2px 0; }
-  .weakness { color: #d97706; font-weight: bold; margin: 4px 0 4px 12px; padding: 2px 0; }
-  .recommend { color: #6366f1; font-weight: bold; margin: 4px 0 4px 12px; padding: 2px 0; }
-  .target { color: #0891b2; font-weight: bold; margin: 4px 0 4px 12px; padding: 2px 0; }
+  .strength { color: #059669; font-weight: bold; margin: 4px 0 4px 12px; padding: 3px 10px; background: #ecfdf5; border-left: 4px solid #059669; border-radius: 4px; }
+  .weakness { color: #d97706; font-weight: bold; margin: 4px 0 4px 12px; padding: 3px 10px; background: #fffbeb; border-left: 4px solid #d97706; border-radius: 4px; }
+  .recommend { color: #6366f1; font-weight: bold; margin: 4px 0 4px 12px; padding: 3px 10px; background: #eef2ff; border-left: 4px solid #6366f1; border-radius: 4px; }
+  .target { color: #0891b2; font-weight: bold; margin: 4px 0 4px 12px; padding: 3px 10px; background: #ecfeff; border-left: 4px solid #0891b2; border-radius: 4px; }
+  .verse { color: #7c3aed; font-style: italic; margin: 8px 0 8px 24px; padding: 8px 14px; background: #f5f3ff; border-left: 4px solid #7c3aed; border-radius: 4px; font-size: 10pt; }
+  .highlight { background: #fef9c3; padding: 1px 6px; border-radius: 3px; font-weight: bold; color: #854d0e; }
+  .metric { display: inline-block; background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; font-weight: bold; padding: 2px 10px; border-radius: 12px; font-size: 10pt; }
 
-  table.church-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; border: 1px solid #cbd5e1; }
-  table.church-table thead th { background-color: #4f46e5; color: #fff; font-weight: bold; padding: 7px 10px; text-align: left; border: 1px solid #3730a3; }
-  table.church-table tbody td { padding: 5px 10px; border: 1px solid #cbd5e1; vertical-align: top; }
+  table.church-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+  table.church-table thead th { background: linear-gradient(135deg, #4f46e5, #6366f1); color: #fff; font-weight: bold; padding: 8px 12px; text-align: left; border: none; }
+  table.church-table tbody td { padding: 6px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
   table.church-table tbody tr.even td { background-color: #f8fafc; }
   table.church-table tbody tr.odd td { background-color: #fff; }
-  code { font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; background: #f1f5f9; padding: 1px 4px; }
+  table.church-table tbody tr:hover td { background-color: #eef2ff; }
+  code { font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; color: #be123c; }
 
   .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #cbd5e1; text-align: center; font-size: 9pt; color: #94a3b8; font-style: italic; }
   @media print { body { font-size: 10pt; } }
@@ -584,9 +637,8 @@ ${content}
   <div class="date">${dateStr}</div>
 </div>
 ${content}
-<div class="footer">Document confidentiel — Généré par l'Assistant IA (Mistral)<br/>${name} — ${dateStr}</div>
+<div class="footer">${name} — ${dateStr}</div>
 </body></html>`);
-    w.document.close();
     w.focus();
     setTimeout(() => w.print(), 500);
   };

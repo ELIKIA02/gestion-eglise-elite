@@ -130,6 +130,75 @@ export default function ReportsModule({ transactions, events, members, settings 
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = () => {
+    const monthlyRows = reportStats.monthlyData.map(m =>
+      `<tr><td>${m.name}</td><td>${formatFCFA(m.Recettes)}</td><td>${formatFCFA(m.Dépenses)}</td></tr>`
+    ).join('');
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Rapport ${selectedYear}</title>
+<style>
+  @page { margin: 20mm 15mm; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+  h1 { color: #800020; text-align: center; font-size: 24px; border-bottom: 2px solid #800020; padding-bottom: 10px; }
+  h2 { color: #2c3e50; font-size: 16px; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+  .header { text-align: center; border-bottom: 3px double #800020; padding-bottom: 15px; margin-bottom: 30px; }
+  .kpis { display: flex; justify-content: space-between; margin: 20px 0; }
+  .kpi { border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 30%; text-align: center; }
+  .kpi-val { font-size: 20px; font-weight: bold; color: #800020; margin-top: 5px; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  th, td { border: 1px solid #e0e0e0; padding: 8px; text-align: left; font-size: 12px; }
+  th { background-color: #f5f5f5; font-weight: bold; }
+  .footer { margin-top: 50px; text-align: right; font-size: 11px; font-style: italic; }
+</style></head><body>
+<div class="header">
+  <div style="font-size: 22px; font-weight: bold; color: #800020;">
+    ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" style="width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;" />` : (settings?.appLogo || '†')} ${settings?.appName || 'Gestion d\'Église Élite'}
+  </div>
+  <div style="font-size: 11px; color: #4a5568; white-space: pre-wrap;">${settings?.reportHeader || 'Rapport paroissial'}</div>
+</div>
+<h1>Rapport Annuel ${selectedYear}</h1>
+<p style="text-align:center;font-size:10px;color:#718096;">Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+<div class="kpis">
+  <div class="kpi"><div>Recettes</div><div class="kpi-val">${formatFCFA(reportStats.annualRevenue)}</div></div>
+  <div class="kpi"><div>Dépenses</div><div class="kpi-val">${formatFCFA(reportStats.annualExpense)}</div></div>
+  <div class="kpi"><div>Solde</div><div class="kpi-val">${formatFCFA(reportStats.netBalance)}</div></div>
+</div>
+<h2>Membres</h2>
+<p>Actifs : ${reportStats.activeMembers} · En observation : ${reportStats.observationMembers} · Total cultes : ${reportStats.totalServices}</p>
+<h2>Revenus</h2>
+<ul>
+  <li>Dîmes : ${formatFCFA(reportStats.tithesTotal)}</li>
+  <li>Offrandes : ${formatFCFA(reportStats.offeringsTotal)}</li>
+  <li>Autres recettes : ${formatFCFA(reportStats.annualRevenue - reportStats.tithesTotal - reportStats.offeringsTotal)}</li>
+</ul>
+<h2>Détail Mensuel</h2>
+<table><thead><tr><th>Mois</th><th>Recettes</th><th>Dépenses</th></tr></thead><tbody>${monthlyRows}</tbody></table>
+<div class="footer">Signature du Secrétariat</div>
+</body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframe.src = url;
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 2000);
+        }, 500);
+      };
+    } catch {
+      const w = window.open(url, '_blank');
+      if (w) { w.focus(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+    }
+  };
+
   const openPrintPreview = () => {
     const w = window.open('', '_blank');
     if (!w) return;
@@ -346,7 +415,7 @@ export default function ReportsModule({ transactions, events, members, settings 
       </div>
 
       {/* Export cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <button onClick={() => exportCSV('finances')}
           className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left">
           <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
@@ -380,8 +449,19 @@ export default function ReportsModule({ transactions, events, members, settings 
           </div>
         </button>
 
+        <button onClick={exportPDF}
+          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+            <Download className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-800 block">Exporter en PDF</span>
+            <span className="text-[10px] text-slate-400">Rapport {selectedYear}</span>
+          </div>
+        </button>
+
         <button onClick={openPrintPreview}
-          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left">
+          className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
           <div className="w-9 h-9 rounded-full bg-stone-50 flex items-center justify-center shrink-0">
             <Printer className="w-4 h-4 text-stone-700" />
           </div>

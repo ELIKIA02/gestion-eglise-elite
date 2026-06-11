@@ -6,7 +6,10 @@ export interface Member {
   email: string;
   phone: string;
   status: MemberStatus;
-  ministry: string; // e.g., Ushers, Musicians, École du dimanche, Tech, None
+  ministry: string;
+  birthday?: string;
+  address?: string;
+  group?: string;
   createdAt: string;
 }
 
@@ -71,6 +74,16 @@ export interface Department {
   createdAt: string;
 }
 
+export interface AppNotification {
+  id: string;
+  type: 'birthday' | 'event' | 'finance' | 'attendance' | 'system';
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface ChurchSettings {
   id?: string;
   appName: string;
@@ -81,6 +94,14 @@ export interface ChurchSettings {
   reportHeader: string;
   mistralApiKey?: string;
   cachetBase64?: string;
+  theme?: 'light' | 'dark';
+  notifications?: {
+    birthdayReminder: boolean;
+    eventReminder: boolean;
+    lowBalanceAlert: boolean;
+    attendanceAlert: boolean;
+    reminderDays: number;
+  };
   updatedAt: string;
 }
 
