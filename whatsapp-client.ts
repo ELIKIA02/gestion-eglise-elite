@@ -1,9 +1,15 @@
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
 
-let sock: ReturnType<typeof makeWASocket> | null = null;
+// Dynamic import for ESM-only baileys (incompatible with esbuild CJS output)
+let baileys: any = null;
+async function getBaileys() {
+  if (!baileys) baileys = await import('@whiskeysockets/baileys');
+  return baileys;
+}
+
+let sock: any = null;
 let currentQR: string | null = null;
 let status: 'disconnected' | 'connecting' | 'connected' = 'disconnected';
 let reconnectAttempt = 0;
@@ -25,11 +31,14 @@ export async function initWhatsApp() {
   }
 
   try {
+    const b = await getBaileys();
+    const { useMultiFileAuthState, DisconnectReason } = b;
+
     console.log('[WA] Loading auth state...');
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
     console.log('[WA] Auth state loaded, creating socket...');
 
-    sock = makeWASocket({
+    sock = b.default({
       auth: state,
       printQRInTerminal: true,
       browser: ['Gestion Eglise', 'Chrome', '1.0.0'],
@@ -37,7 +46,7 @@ export async function initWhatsApp() {
       markOnlineOnConnect: false,
     });
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', (update: any) => {
       const { connection, lastDisconnect, qr } = update;
       if (qr) {
         currentQR = qr;
