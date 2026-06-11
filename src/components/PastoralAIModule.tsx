@@ -241,7 +241,7 @@ export default function PastoralAIModule({ settings, members, transactions, even
       effectivePrompt += toneMap[smsTone];
     }
     if (action === 'exhortation' && seriesMode) {
-      effectivePrompt = promptInput;
+      effectivePrompt = `Thème : "${promptInput}". ${numberOfDays} jours. Génère chaque jour avec la structure complète (verset, contexte, mot grec/hébreu, histoire biblique, enseignement, application, prière).`;
       setParsedDays([]);
       clearSavedSeries();
       setSavedSeriesInfo('');
