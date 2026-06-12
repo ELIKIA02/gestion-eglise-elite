@@ -4,7 +4,7 @@ import { ChurchSettings, Member } from '../types';
 
 type DocType = 'certificat' | 'recu' | 'attestation' | 'devis' | 'fiche';
 type Template = 'classique' | 'moderne' | 'elegant';
-type FicheType = 'membre' | 'finance' | 'culte' | 'communication' | 'enseignement' | 'liturgique' | 'departement' | 'presence';
+type FicheType = 'membre' | 'finance' | 'culte' | 'communication' | 'enseignement' | 'liturgique' | 'departement' | 'presence' | 'hebdomadaire';
 
 interface DocConfig {
   id: DocType;
@@ -69,6 +69,7 @@ const FICHE_TYPES: { id: FicheType; label: string; icon: string; desc: string }[
   { id: 'liturgique', label: 'Fiche Liturgique', icon: '🕯️', desc: 'Thèmes et célébrations' },
   { id: 'departement', label: 'Fiche Département', icon: '🏛️', desc: 'Ministères et départements' },
   { id: 'presence', label: 'Fiche Présence', icon: '✅', desc: 'Assistance aux cultes' },
+  { id: 'hebdomadaire', label: 'Suivi Hebdomadaire', icon: '📊', desc: 'Participants, offrandes et dépenses sur 3 jours' },
 ];
 
 const TEMPLATES: { id: Template; label: string; desc: string; color: string; bg: string; border: string; accent: string; secondary: string }[] = [
@@ -322,6 +323,90 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
                 <div style={{ marginTop: '12px' }}>
                   <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Membres</span>
                   <div style={{ border: `1px dashed ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '60px' }}></div>
+                </div>
+              </div>
+            );
+          case 'hebdomadaire':
+            return (
+              <div>
+                <div style={{ fontSize: '11pt', fontWeight: 'bold', color: T.accent, textAlign: 'center', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '2px' }}>Fiche de Suivi Hebdomadaire</div>
+                <div style={{ fontSize: '8pt', color: '#64748b', textAlign: 'center', marginBottom: '16px' }}>Participants • Offrandes • Dépenses</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8pt', color: '#94a3b8', marginBottom: '12px', fontFamily: "'Courier New', monospace" }}>N° {ref}</div>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ flex: 1, borderBottom: `1px dashed ${T.border}` }}>
+                    <span style={{ fontSize: '8pt', color: '#64748b', fontWeight: 'bold' }}>Semaine du</span>
+                    <div style={{ height: '24px' }}></div>
+                  </div>
+                  <div style={{ flex: 1, borderBottom: `1px dashed ${T.border}` }}>
+                    <span style={{ fontSize: '8pt', color: '#64748b', fontWeight: 'bold' }}>au</span>
+                    <div style={{ height: '24px' }}></div>
+                  </div>
+                  <div style={{ flex: 1, borderBottom: `1px dashed ${T.border}` }}>
+                    <span style={{ fontSize: '8pt', color: '#64748b', fontWeight: 'bold' }}>Mois</span>
+                    <div style={{ height: '24px' }}></div>
+                  </div>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '12px' }}>
+                  <thead>
+                    <tr style={{ background: T.accent, color: '#fff' }}>
+                      <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 'bold', fontSize: '7.5pt' }}>Jour</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 'bold', fontSize: '7.5pt', width: '50px' }}>Participants</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '7.5pt' }}>Dîme</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '7.5pt' }}>Offrande</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '7.5pt' }}>Actions de Grâce</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '7.5pt' }}>Total Entrées</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['Jour 1', 'Jour 2', 'Jour 3'].map((jour, i) => (
+                      <tr key={i} style={{ borderBottom: `1px solid ${T.border}` }}>
+                        <td style={{ padding: '4px 8px', fontWeight: 'bold' }}>
+                          <div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}>{jour}</div>
+                        </td>
+                        <td style={{ padding: '4px 8px', textAlign: 'center' }}><div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}></div></td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right' }}><div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}></div></td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right' }}><div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}></div></td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right' }}><div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}></div></td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right' }}><div style={{ borderBottom: `1px dashed ${T.border}`, minHeight: '24px' }}></div></td>
+                      </tr>
+                    ))}
+                    <tr style={{ background: T.secondary, fontWeight: 'bold' }}>
+                      <td style={{ padding: '6px 8px' }}>TOTAUX SEMAINE</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}></td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}></td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}></td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}></td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style={{ marginTop: '16px' }}>
+                  <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Dépenses de la semaine</span>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
+                    <thead>
+                      <tr style={{ background: T.accent, color: '#fff' }}>
+                        <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 'bold', fontSize: '7.5pt' }}>Date</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 'bold', fontSize: '7.5pt' }}>Libellé</th>
+                        <th style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '7.5pt', width: '100px' }}>Montant</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[1, 2, 3, 4].map(i => (
+                        <tr key={i} style={{ borderBottom: `1px dashed ${T.border}` }}>
+                          <td style={{ padding: '4px 8px', minHeight: '22px' }}></td>
+                          <td style={{ padding: '4px 8px', minHeight: '22px' }}></td>
+                          <td style={{ padding: '4px 8px', textAlign: 'right', minHeight: '22px' }}></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Observations / Notes</span>
+                  <div style={{ border: `1px dashed ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '50px' }}></div>
                 </div>
               </div>
             );
