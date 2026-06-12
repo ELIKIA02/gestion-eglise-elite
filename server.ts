@@ -556,27 +556,30 @@ async function startServer() {
   <div style="height:80px"></div>
 </div>
 <div class="actions">
-  <button class="btn-download" onclick="downloadJSON()">📥 Télécharger ma fiche</button>
-  <button class="btn-send" onclick="submitForm()" id="sendBtn">📤 Envoyer à l'Église</button>
+  <button class="btn-download" id="dlBtn">📥 Télécharger ma fiche</button>
+  <button class="btn-send" id="sendBtn">📤 Envoyer à l'Église</button>
 </div>
 <div id="toast" class="toast"></div>
 <script>
+(function(){
 function g(i){return document.getElementById(i)}
 function v(i){const e=g(i);return e?e.value:''}
 function rv(n){const e=document.querySelector('input[name="'+n+'"]:checked');return e?e.value:''}
-function st(m,e){const t=g('toast');t.textContent=m;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(function(){t.style.display='none'},5000)}
+function st(m,e){const t=g('toast');if(!t)return;t.textContent=m;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(function(){t.style.display='none'},5000)}
 function gd(){return{name:v('name'),email:v('email'),phone:v('phone'),birthday:v('birthday'),birthPlace:v('birthPlace'),nationality:v('nationality'),gender:rv('gender'),maritalStatus:v('maritalStatus'),profession:v('profession'),address:v('address'),conversionDate:v('conversionDate'),formerChurch:v('formerChurch'),arrivalDate:v('arrivalDate'),baptized:v('baptized'),baptismDate:v('baptismDate'),talents:v('talents'),motivation:v('motivation'),spouseName:v('spouseName'),childrenCount:v('childrenCount'),childrenAges:v('childrenAges'),emergencyPhone:v('emergencyPhone'),emergencyContact:v('emergencyContact')}}
 function dl(){var d=gd();if(!d.name.trim()){st('Veuillez remplir le nom',true);return}
   var b=new Blob([JSON.stringify({data:d},null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiche-renseignement-'+Date.now()+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);st('✅ Fichier téléchargé !')}
 async function sf(){var d=gd();if(!d.name.trim()){st('Veuillez remplir le nom',true);return}
-  var btn=g('sendBtn');btn.innerHTML='<span class="spinner"></span> Envoi...';btn.disabled=true;
+  var btn=g('sendBtn');if(!btn)return;btn.innerHTML='<span class="spinner"></span> Envoi...';btn.disabled=true;
   try{var r=await fetch('/api/renseignement/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:d})});
     var j=await r.json();if(j.success){st('✅ Fiche envoyée avec succès !');dl()}else{st('❌ '+(j.error||'Erreur'),true)}
   }catch(e){st('❌ Problème de connexion. Vérifiez votre connexion internet.',true)}
   btn.innerHTML='📤 Envoyer à l\'Église';btn.disabled=false}
-document.getElementById('sendBtn').onclick=sf;
+g('sendBtn').onclick=sf;
+g('dlBtn').onclick=dl;
+})();
 <\/script>
 </body>
 </html>`;
