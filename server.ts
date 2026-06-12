@@ -4,7 +4,7 @@ import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
-import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64 } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage } from "./whatsapp-client";
 
 dotenv.config();
 
@@ -442,6 +442,62 @@ async function startServer() {
         return res.json({ success: true, data });
       }
       res.json({ success: true, data: null });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/renseignement/submit", async (req, res) => {
+    try {
+      const { data } = req.body;
+      if (!data) {
+        return res.status(400).json({ success: false, error: "Données manquantes" });
+      }
+
+      const waStatus = getStatus();
+      if (waStatus !== 'connected') {
+        return res.status(400).json({ success: false, error: "WhatsApp non connecté", waStatus });
+      }
+
+      const format = (v: any) => v || '—';
+      const message = [
+        "📋 *NOUVELLE FICHE DE RENSEIGNEMENT — MEMBRE*",
+        "",
+        "━ *État Civil* ━",
+        `👤 Nom : ${format(data.name)}`,
+        `🎂 Né(e) le ${format(data.birthday)} à ${format(data.birthPlace)}`,
+        `🌍 Nationalité : ${format(data.nationality)}  ⚤ Sexe : ${format(data.gender)}`,
+        `💍 Situation : ${format(data.maritalStatus)}`,
+        `💼 Profession : ${format(data.profession)}`,
+        `📧 Email : ${format(data.email)}  📞 Tél : ${format(data.phone)}`,
+        `🏠 Adresse : ${format(data.address)}`,
+        "",
+        "━ *Vie Spirituelle* ━",
+        `🙏 Conversion : ${format(data.conversionDate)}`,
+        `⛪ Ancienne église : ${format(data.formerChurch)}`,
+        `📅 Arrivée : ${format(data.arrivalDate)}`,
+        `🕊️ Baptisé : ${format(data.baptized)}${data.baptismDate ? ` (${data.baptismDate})` : ''}`,
+        "",
+        "━ *Engagement* ━",
+        `🎯 Talents : ${format(data.talents)}`,
+        `🔥 Motivation : ${format(data.motivation)}`,
+        "",
+        "━ *Famille* ━",
+        `👫 Conjoint(e) : ${format(data.spouseName)}`,
+        `👶 Enfants : ${data.childrenCount || '—'} — Âges : ${format(data.childrenAges)}`,
+        "",
+        "━ *Contact Urgence* ━",
+        `📞 ${format(data.emergencyPhone)} — ${format(data.emergencyContact)}`,
+        "",
+        "📎 *Envoyé depuis le formulaire mobile*"
+      ].join('\n');
+
+      const targetPhone = process.env.CHURCH_WHATSAPP || '';
+      if (targetPhone) {
+        await sendMessage(targetPhone, message);
+        return res.json({ success: true, sent: true });
+      }
+      res.json({ success: true, sent: false, info: "Aucun CHURCH_WHATSAPP configuré" });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

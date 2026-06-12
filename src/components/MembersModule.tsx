@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, db, handleFirestoreError, OperationType } from '../firebase';
 import { Member, MemberStatus, Department } from '../types';
-import { Search, UserPlus, Mail, Phone, Edit2, Trash2, Filter, Eye, X, Calendar, MapPin, Users, Award, List, Grid3x3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, UserPlus, Mail, Phone, Edit2, Trash2, Filter, Eye, X, Calendar, MapPin, Users, Award, List, Grid3x3, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 
 interface MembersModuleProps {
   members: Member[];
@@ -83,6 +83,49 @@ export default function MembersModule({ members, departments, loading, onRefresh
 
   const [saving, setSaving] = useState(false);
   const [viewingMember, setViewingMember] = useState<Member | null>(null);
+
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string);
+        const d = json.data || json;
+        setFormData(prev => ({
+          ...prev,
+          name: d.name || prev.name,
+          email: d.email || prev.email,
+          phone: d.phone || prev.phone,
+          birthday: d.birthday || prev.birthday,
+          birthPlace: d.birthPlace || prev.birthPlace,
+          nationality: d.nationality || prev.nationality,
+          gender: d.gender || prev.gender,
+          maritalStatus: d.maritalStatus || prev.maritalStatus,
+          profession: d.profession || prev.profession,
+          address: d.address || prev.address,
+          conversionDate: d.conversionDate || prev.conversionDate,
+          formerChurch: d.formerChurch || prev.formerChurch,
+          arrivalDate: d.arrivalDate || prev.arrivalDate,
+          baptized: d.baptized || prev.baptized,
+          baptismDate: d.baptismDate || prev.baptismDate,
+          talents: d.talents || prev.talents,
+          motivation: d.motivation || prev.motivation,
+          spouseName: d.spouseName || prev.spouseName,
+          childrenCount: d.childrenCount || prev.childrenCount,
+          childrenAges: d.childrenAges || prev.childrenAges,
+          emergencyPhone: d.emergencyPhone || prev.emergencyPhone,
+          emergencyContact: d.emergencyContact || prev.emergencyContact,
+        }));
+        setIsAdding(true);
+        setEditingId(null);
+      } catch {
+        alert('Erreur : fichier JSON invalide.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const resetForm = () => {
     setFormData({
@@ -267,14 +310,25 @@ export default function MembersModule({ members, departments, loading, onRefresh
           <p className="text-xs text-slate-500 dark:text-slate-400">Gérez les fidèles, assignations de ministères et statuts d'activité.</p>
         </div>
         {!isAdding && (
-          <button
-            id="btn-add-member"
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm cursor-pointer border border-indigo-500"
-          >
-            <UserPlus className="w-4 h-4 text-indigo-200 dark:text-indigo-300" />
-            Nouveau Membre
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              id="btn-add-member"
+              onClick={() => setIsAdding(true)}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm cursor-pointer border border-indigo-500"
+            >
+              <UserPlus className="w-4 h-4 text-indigo-200 dark:text-indigo-300" />
+              Nouveau Membre
+            </button>
+            <button
+              onClick={() => document.getElementById('import-json-input')?.click()}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm cursor-pointer border border-emerald-500"
+            >
+              <Upload className="w-4 h-4" />
+              Importer JSON
+            </button>
+            <input id="import-json-input" type="file" accept=".json" className="hidden"
+              onChange={handleImportJson} />
+          </div>
         )}
       </div>
 
