@@ -255,7 +255,7 @@ ${content}
     </div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label>Profession</label><input type="text" id="profession" placeholder="Métier"></div>
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="phone" placeholder="+243 XXX XXX XXX"></div>
+      <div style="flex:1"><label>Téléphone</label><input type="tel" id="phone" placeholder="+242 XX XXX XXXX"></div>
     </div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label>Email</label><input type="email" id="email" placeholder="exemple@email.com"></div>
@@ -300,7 +300,7 @@ ${content}
   <div class="section">
     <h2>Contact d'Urgence</h2>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="emergencyPhone" placeholder="+243 XXX XXX XXX"></div>
+      <div style="flex:1"><label>Téléphone</label><input type="tel" id="emergencyPhone" placeholder="+242 XX XXX XXXX"></div>
       <div style="flex:1"><label>Nom du Contact</label><input type="text" id="emergencyContact" placeholder="Mère, père, etc."></div>
     </div>
   </div>
