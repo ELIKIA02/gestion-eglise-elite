@@ -773,6 +773,31 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           </div>
         </div>
       </div>
+
+      {/* Vider les données */}
+      <div className="border-t border-red-200 pt-6 mt-4">
+        <h3 className="text-sm font-bold text-red-700 flex items-center gap-2 mb-4">
+          <Trash2 className="w-4 h-4 text-red-600" />
+          Zone de Danger
+        </h3>
+        <p className="text-[11px] text-slate-500 mb-4">
+          Ces actions sont irréversibles. Assurez-vous d'avoir exporté vos données avant.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Vider toutes les données locales ? Cette action est irréversible.')) {
+              localStorage.removeItem('church_db_data');
+              localStorage.removeItem('church_enseignements');
+              window.location.reload();
+            }
+          }}
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm border border-red-500"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Vider toutes les données
+        </button>
+      </div>
     </div>
   );
 }

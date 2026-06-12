@@ -18,7 +18,7 @@ import DocumentsModule from './components/DocumentsModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, Trash2, BookOpen, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -366,13 +366,6 @@ export default function App() {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-slate-800 hidden md:block">
-          <button onClick={handleClearData}
-            className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-rose-900 text-slate-300 hover:text-white py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-all border border-slate-700">
-            <Trash2 className="w-3.5 h-3.5" />
-            Vider les données
-          </button>
-        </div>
       </aside>
 
       {/* Main */}
