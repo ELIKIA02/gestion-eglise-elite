@@ -101,7 +101,7 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
       ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
       : doc.label;
     const pageSize = a5Mode ? 'A4 landscape' : 'A4';
-    const pageMargin = a5Mode ? '10mm' : '15mm';
+    const pageMargin = a5Mode ? '8mm' : '15mm';
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html>
@@ -189,7 +189,7 @@ ${content}
     if (a5Mode) {
       const s = document.createElement('style');
       s.id = id;
-      s.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+      s.textContent = '@page { size: A4 landscape; margin: 8mm; }';
       document.head.appendChild(s);
     }
     return () => { const el = document.getElementById(id); if (el) el.remove(); };
@@ -730,10 +730,19 @@ ${content}
       );
 
       if (a5Mode && ficheType === 'renseignement') {
+        const scale = 0.68;
         return (
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100/scale}%` }}>
+                {singleFiche()}
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100/scale}%` }}>
+                {singleFiche()}
+              </div>
+            </div>
           </div>
         );
       }
