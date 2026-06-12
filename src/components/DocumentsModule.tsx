@@ -129,7 +129,7 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
     const docName = docType === 'fiche'
       ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
       : doc.label;
-    const isA5 = a5Mode && ficheType === 'renseignement';
+    const isA5 = a5Mode && (ficheType === 'renseignement' || ficheType === 'hebdomadaire');
     const themeBg = T.bg;
     const themeAccent = T.accent;
     const themeBorder = T.border;
@@ -493,7 +493,6 @@ ${content}
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
-                  <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Observations / Notes</span>
                   <div style={{ border: `1px solid ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '50px' }}></div>
                 </div>
               </div>
@@ -701,7 +700,7 @@ ${content}
       };
 
       const singleFiche = () => {
-        const isA5 = a5Mode && ficheType === 'renseignement';
+        const isA5 = a5Mode && (ficheType === 'renseignement' || ficheType === 'hebdomadaire');
         const docStyle = {
           ...S.doc,
           maxWidth: isA5 ? '100%' : '800px',
@@ -742,7 +741,7 @@ ${content}
         );
       };
 
-      if (a5Mode && ficheType === 'renseignement') {
+      if (a5Mode && (ficheType === 'renseignement' || ficheType === 'hebdomadaire')) {
         return (
           <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
             <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
@@ -1019,7 +1018,7 @@ ${content}
               <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: T.secondary, color: T.accent }}>
                 {T.label}
               </span>
-              {docType === 'fiche' && ficheType === 'renseignement' && (
+              {docType === 'fiche' && (ficheType === 'renseignement' || ficheType === 'hebdomadaire') && (
                 <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer select-none">
                   <input type="checkbox" checked={a5Mode} onChange={e => setA5Mode(e.target.checked)}
                     className="w-3 h-3 rounded border-slate-300 cursor-pointer" />
