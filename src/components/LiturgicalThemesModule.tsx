@@ -99,8 +99,8 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
 
   const filteredThemes = useMemo(() => {
     return themes.filter(t => {
-      const d = new Date(t.date + 'T00:00:00');
-      const matchesMonth = d.getMonth() === currentMonth.getMonth() && d.getFullYear() === currentMonth.getFullYear();
+      const [ty, tm] = t.date.split('-').map(Number);
+      const matchesMonth = ty === currentMonth.getFullYear() && tm === (currentMonth.getMonth() + 1);
       const matchesSeason = filterSeason === 'all' || t.season === filterSeason;
       const matchesType = filterType === 'all' || t.themeType === filterType;
       return matchesMonth && matchesSeason && matchesType;
@@ -162,7 +162,7 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
     if (!window.confirm(`Programmer l'envoi du thème "${theme.title}" par WhatsApp ?`)) return;
     setSending(theme.id || null);
     try {
-      const text = `📖 *Thème Liturgique* 📖\n\n*${theme.title}*\n📅 ${new Date(theme.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}\n${theme.preacher ? `👤 Prédicateur : ${theme.preacher}\n` : ''}${theme.bibleText ? `📖 Texte : ${theme.bibleText}\n` : ''}${theme.description ? `\n${theme.description}\n` : ''}${theme.hymns ? `\n🎵 Cantiques : ${theme.hymns}` : ''}`;
+      const text = `📖 *Thème Liturgique* 📖\n\n*${theme.title}*\n📅 ${new Date(theme.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}\n${theme.preacher ? `👤 Prédicateur : ${theme.preacher}\n` : ''}${theme.bibleText ? `📖 Texte : ${theme.bibleText}\n` : ''}${theme.description ? `\n${theme.description}\n` : ''}${theme.hymns ? `\n🎵 Cantiques : ${theme.hymns}` : ''}`;
       await addDoc(collection(db, 'church_communications'), {
         type: 'WhatsApp', title: `Thème: ${theme.title}`,
         template: text, sentToGroup: 'Tous',
@@ -175,7 +175,11 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
     finally { setSending(null); }
   };
 
-  const isToday = (dateStr: string) => dateStr === new Date().toISOString().substring(0, 10);
+  const isToday = (dateStr: string) => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return dateStr === today;
+  };
 
   return (
     <div className="space-y-4">
@@ -227,7 +231,7 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
         <div className="grid grid-cols-7">
           {calendarDays.map((cell, idx) => {
             if (!cell) return <div key={`empty-${idx}`} className="min-h-[100px] p-1 bg-slate-50/50" />;
-            const dateStr = cell.toISOString().substring(0, 10);
+            const dateStr = `${cell.getFullYear()}-${String(cell.getMonth() + 1).padStart(2, '0')}-${String(cell.getDate()).padStart(2, '0')}`;
             const dayThemes = themesByDate.get(dateStr) || [];
             const today = isToday(dateStr);
             return (
@@ -269,7 +273,7 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
                       {theme.scheduled && <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-50 text-green-700 border border-green-200"><Clock className="w-2.5 h-2.5" />Programmé</span>}
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-slate-500 flex-wrap">
-                      <span>{new Date(theme.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                      <span>{new Date(theme.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
                       {theme.preacher && <span>Prédicateur : {theme.preacher}</span>}
                       {theme.bibleText && <span className="font-semibold text-slate-600">{theme.bibleText}</span>}
                     </div>
