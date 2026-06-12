@@ -4,7 +4,7 @@ import { ChurchSettings, Member } from '../types';
 
 type DocType = 'certificat' | 'recu' | 'attestation' | 'devis' | 'fiche';
 type Template = 'classique' | 'moderne' | 'elegant';
-type FicheType = 'membre' | 'finance' | 'culte' | 'communication' | 'enseignement' | 'liturgique' | 'departement' | 'presence' | 'hebdomadaire';
+type FicheType = 'membre' | 'finance' | 'culte' | 'communication' | 'enseignement' | 'liturgique' | 'departement' | 'presence' | 'hebdomadaire' | 'renseignement';
 
 interface DocConfig {
   id: DocType;
@@ -70,6 +70,7 @@ const FICHE_TYPES: { id: FicheType; label: string; icon: string; desc: string }[
   { id: 'departement', label: 'Fiche Département', icon: '🏛️', desc: 'Ministères et départements' },
   { id: 'presence', label: 'Fiche Présence', icon: '✅', desc: 'Assistance aux cultes' },
   { id: 'hebdomadaire', label: 'Suivi Hebdomadaire', icon: '📊', desc: 'Participants, offrandes et dépenses sur 3 jours' },
+  { id: 'renseignement', label: "Renseignement Nouveau Membre", icon: '📋', desc: "Fiche d'accueil et d'information" },
 ];
 
 const TEMPLATES: { id: Template; label: string; desc: string; color: string; bg: string; border: string; accent: string; secondary: string }[] = [
@@ -471,6 +472,74 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
                   <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Notes</span>
                   <div style={{ border: `1px dashed ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '40px' }}></div>
                 </div>
+              </div>
+            );
+          case 'renseignement':
+            const box = (label: string, span = 1) => (
+              <td style={{ border: `1px solid ${T.border}`, padding: '5px 8px', minHeight: '28px', verticalAlign: 'top', width: span > 1 ? `${(span / 6) * 100}%` : undefined }}>
+                <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+                <div style={{ minHeight: '22px' }}></div>
+              </td>
+            );
+            const boxFull = (label: string) => (
+              <td colSpan={6} style={{ border: `1px solid ${T.border}`, padding: '5px 8px', minHeight: '28px', verticalAlign: 'top' }}>
+                <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+                <div style={{ minHeight: '22px' }}></div>
+              </td>
+            );
+            return (
+              <div>
+                <div style={{ fontSize: '12pt', fontWeight: 'bold', color: T.accent, textAlign: 'center', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '3px' }}>Fiche de Renseignement</div>
+                <div style={{ fontSize: '8pt', color: '#64748b', textAlign: 'center', marginBottom: '4px' }}>Nouveau Membre</div>
+                <div style={{ textAlign: 'center', fontSize: '7.5pt', color: '#94a3b8', marginBottom: '16px', fontFamily: "'Courier New', monospace" }}>N° {ref}</div>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>État Civil</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
+                  <tbody>
+                    <tr>{box('Nom & Prénoms', 6)}</tr>
+                    <tr>{box('Date de naissance', 2)}{box('Lieu de naissance', 2)}{box('Sexe', 1)}{box('Nationalité', 1)}</tr>
+                    <tr>{box('Situation matrimoniale', 3)}{box('Profession', 3)}</tr>
+                  </tbody>
+                </table>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Contact</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
+                  <tbody>
+                    <tr>{box('Adresse complète', 6)}</tr>
+                    <tr>{box('Téléphone', 3)}{box('Email', 3)}</tr>
+                  </tbody>
+                </table>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Vie Spirituelle</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
+                  <tbody>
+                    <tr>{box('Date de conversion', 2)}{box('Baptême (Oui/Non)', 2)}{box("Date de baptême", 2)}</tr>
+                    <tr>{box('Ancienne église', 3)}{box("Date d'arrivée", 3)}</tr>
+                  </tbody>
+                </table>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Motivation & Engagement</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
+                  <tbody>
+                    <tr>{box("Ministère souhaité", 3)}{box('Dons / Talents', 3)}</tr>
+                    <tr>{boxFull("Motivation / pourquoi avez-vous choisi cette église")}</tr>
+                  </tbody>
+                </table>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Famille & Contact Urgence</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
+                  <tbody>
+                    <tr>{box('Nom du conjoint(e)', 3)}{box("Nombre d'enfants", 1)}{box('Âges', 2)}</tr>
+                    <tr>{box("Personne à contacter (urgence)", 3)}{box('Téléphone urgence', 3)}</tr>
+                  </tbody>
+                </table>
+
+                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Observations</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
+                  <tbody>
+                    <tr><td colSpan={6} style={{ border: `1px solid ${T.border}`, padding: '8px', minHeight: '60px', verticalAlign: 'top' }}><div style={{ minHeight: '50px' }}></div></td></tr>
+                  </tbody>
+                </table>
               </div>
             );
         }
