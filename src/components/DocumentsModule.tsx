@@ -709,29 +709,39 @@ ${content}
         }
       };
 
-      const singleFiche = () => (
-        <div style={S.doc}>
-          <div style={S.borderDecor}>
-            <HeaderBlock />
-            {ficheContent()}
-            {ficheType !== 'renseignement' && (
-              <div style={{ marginTop: '28px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
-                  <div style={{ textAlign: 'center', width: '200px' }}>
-                    <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Signature du responsable</div>
+      const singleFiche = () => {
+        const isA5 = a5Mode && ficheType === 'renseignement';
+        return (
+          <div style={S.doc}>
+            <div style={S.borderDecor}>
+              {!isA5 && <HeaderBlock />}
+              {ficheContent()}
+              {ficheType !== 'renseignement' && (
+                <div style={{ marginTop: '28px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
+                    <div style={{ textAlign: 'center', width: '200px' }}>
+                      <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Signature du responsable</div>
+                    </div>
+                    <div style={{ textAlign: 'center', width: '200px' }}>
+                      <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Date</div>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'center', width: '200px' }}>
-                    <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Date</div>
-                  </div>
+                  <CachetBlock />
                 </div>
-                <CachetBlock />
-              </div>
-            )}
-            {footer}
+              )}
+              {isA5 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px', paddingTop: '6px', borderTop: `1px solid ${T.border}`, fontSize: '6pt', color: '#94a3b8' }}>
+                  {isImage ? <img src={logo} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} /> : <span style={{ fontSize: '12px' }}>{logo}</span>}
+                  <span>{appName}</span>
+                  <span>·</span>
+                  <span>{ref}</span>
+                </div>
+              ) : footer}
+            </div>
+            <BottomDecor />
           </div>
-          <BottomDecor />
-        </div>
-      );
+        );
+      };
 
       if (a5Mode && ficheType === 'renseignement') {
         const scale = 0.68;
