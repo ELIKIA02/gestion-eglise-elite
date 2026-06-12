@@ -27,8 +27,10 @@ export default function AnnualReportModule({ members, transactions, events, sett
 
   const sacraments: SacramentRegister[] = useMemo(() => {
     try {
-      const data = localStorage.getItem('church_sacraments');
-      return data ? JSON.parse(data) : [];
+      const raw = localStorage.getItem('church_db_data');
+      if (!raw) return [];
+      const all = JSON.parse(raw);
+      return all['church_sacraments'] || [];
     } catch { return []; }
   }, []);
 
