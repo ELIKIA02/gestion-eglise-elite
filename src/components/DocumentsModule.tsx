@@ -89,6 +89,7 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   const [lignes, setLignes] = useState<LigneDevis[]>([{ id: genId(), description: '', quantite: 1, prixUnitaire: 0 }]);
   const [ref, setRef] = useState(generateRef());
   const [preview, setPreview] = useState(false);
+  const [a5Mode, setA5Mode] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const doc = DOC_TYPES.find(d => d.id === docType)!;
   const T = TEMPLATES.find(t => t.id === template)!;
@@ -99,6 +100,8 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
     const docName = docType === 'fiche'
       ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
       : doc.label;
+    const pageSize = a5Mode ? 'A4 landscape' : 'A4';
+    const pageMargin = a5Mode ? '10mm' : '15mm';
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`<!DOCTYPE html>
@@ -107,7 +110,7 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 <meta charset="utf-8">
 <title>${docName} - ${ref}</title>
 <style>
-  @page { size: A4; margin: 15mm; }
+  @page { size: ${pageSize}; margin: ${pageMargin}; }
   body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   table { page-break-inside: avoid; }
 </style>
@@ -122,7 +125,9 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
   const downloadWord = () => {
     if (!printRef.current) return;
-    const content = printRef.current.innerHTML;
+    const content = a5Mode && ficheType === 'renseignement'
+      ? printRef.current.innerHTML
+      : printRef.current.innerHTML;
     const docName = docType === 'fiche'
       ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
       : doc.label;
@@ -178,6 +183,17 @@ ${content}
   };
   const updateLigne = (id: string, key: keyof LigneDevis, val: any) => setLignes(lignes.map(l => l.id === id ? { ...l, [key]: val } : l));
   const totalDevis = lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
+
+  useEffect(() => {
+    const id = 'a5-print-style';
+    if (a5Mode) {
+      const s = document.createElement('style');
+      s.id = id;
+      s.textContent = '@page { size: A4 landscape; margin: 10mm; }';
+      document.head.appendChild(s);
+    }
+    return () => { const el = document.getElementById(id); if (el) el.remove(); };
+  }, [a5Mode]);
 
   const renderDocument = () => {
     const appName = settings?.appName || "ELIKIA EKLESIA";
@@ -689,7 +705,7 @@ ${content}
         }
       };
 
-      return (
+      const singleFiche = () => (
         <div style={S.doc}>
           <div style={S.borderDecor}>
             <HeaderBlock />
@@ -712,6 +728,17 @@ ${content}
           <BottomDecor />
         </div>
       );
+
+      if (a5Mode && ficheType === 'renseignement') {
+        return (
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
+          </div>
+        );
+      }
+
+      return singleFiche();
     }
 
     if (docType === 'devis') {
@@ -973,12 +1000,19 @@ ${content}
         </>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-bold text-slate-800">Aperçu — {docType === 'fiche' ? FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche' : doc.label}</h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: T.secondary, color: T.accent }}>
                 {T.label}
               </span>
+              {docType === 'fiche' && ficheType === 'renseignement' && (
+                <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer select-none">
+                  <input type="checkbox" checked={a5Mode} onChange={e => setA5Mode(e.target.checked)}
+                    className="w-3 h-3 rounded border-slate-300 cursor-pointer" />
+                  A5 (2 par A4)
+                </label>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setPreview(false)}
