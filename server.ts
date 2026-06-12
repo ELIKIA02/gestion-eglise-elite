@@ -519,7 +519,7 @@ async function startServer() {
     </div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label>Email</label><input type="email" id="email" placeholder="exemple@email.com"></div>
-      <div style="flex:1"><label>Adresse</label><input type="text" id="address" placeholder="Quartier, Ville"></div>
+      <div style="flex:1"><label>Adresse</label><input type="text" id="address" placeholder="22 rue Owando, Talangaï"></div>
     </div>
   </div>
 
