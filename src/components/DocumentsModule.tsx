@@ -125,17 +125,19 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
   const downloadWord = () => {
     if (!printRef.current) return;
-    const content = a5Mode && ficheType === 'renseignement'
-      ? printRef.current.innerHTML
-      : printRef.current.innerHTML;
+    const content = printRef.current.innerHTML;
     const docName = docType === 'fiche'
       ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
       : doc.label;
+    const isA5 = a5Mode && ficheType === 'renseignement';
     const themeBg = T.bg;
     const themeAccent = T.accent;
     const themeBorder = T.border;
     const themeSecondary = T.secondary;
     const themeColor = T.color;
+    const pageSetup = isA5
+      ? `<w:PageSetup><w:PageWidth>297mm</w:PageWidth><w:PageHeight>210mm</w:PageHeight></w:PageSetup>`
+      : '';
     const html = `<!DOCTYPE html>
 <html xmlns:o='urn:schemas-microsoft-com:office:office'
       xmlns:w='urn:schemas-microsoft-com:office:word'
@@ -148,11 +150,13 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 <w:View>Print</w:View>
 <w:Zoom>100</w:Zoom>
 <w:DoNotOptimizeForBrowser/>
+${pageSetup}
 </w:WordDocument>
 </xml>
 <![endif]-->
 <style>
-  body { margin: 40px auto; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: ${themeColor}; background: ${themeBg}; }
+  @page { size: ${isA5 ? '297mm 210mm' : 'A4'}; margin: ${isA5 ? '8mm' : '15mm'}; mso-page-orientation: ${isA5 ? 'landscape' : 'portrait'}; }
+  body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; font-size: ${isA5 ? '8pt' : '11pt'}; color: ${themeColor}; background: ${themeBg}; }
   table { border-collapse: collapse; width: 100%; }
   td, th { border: 1px solid ${themeBorder}; mso-border-alt: solid windowtext .5pt; padding: 4px 7px; vertical-align: top; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; mso-background: auto; }
