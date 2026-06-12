@@ -11,7 +11,12 @@ const STORAGE_KEY = 'church_polls';
 function loadPolls(): Poll[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const polls: Poll[] = data ? JSON.parse(data) : [];
+    return polls.map(p => ({
+      ...p,
+      options: p.options || [],
+      recipients: p.recipients || [],
+    }));
   } catch {
     return [];
   }
@@ -172,6 +177,7 @@ export default function PollsModule({ members }: PollsModuleProps) {
   };
 
   const formatDate = (iso: string) => {
+    if (!iso) return '';
     return new Date(iso).toLocaleString('fr');
   };
 
@@ -312,8 +318,8 @@ export default function PollsModule({ members }: PollsModuleProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                    <span>{poll.options.length} option(s)</span>
-                    <span>{poll.recipients.length} destinataire(s)</span>
+                    <span>{(poll.options || []).length} option(s)</span>
+                    <span>{(poll.recipients || []).length} destinataire(s)</span>
                   </div>
                 </div>
               ))
@@ -340,14 +346,14 @@ export default function PollsModule({ members }: PollsModuleProps) {
                   ))}
                 </div>
                 <div className="text-[10px] text-slate-500">
-                  <strong>{selectedPoll.recipients.length}</strong> destinataire(s)
+                  <strong>{(selectedPoll.recipients || []).length}</strong> destinataire(s)
                 </div>
-                {selectedPoll.recipients.length > 0 && (
+                {(selectedPoll.recipients || []).length > 0 && (
                   <details className="text-[10px] text-slate-400">
                     <summary className="cursor-pointer hover:text-slate-600">Voir les destinataires</summary>
                     <div className="mt-1 max-h-32 overflow-y-auto space-y-0.5">
-                      {selectedPoll.recipients.map((r, i) => (
-                        <div key={i} className="text-[10px] text-slate-500">{r}</div>
+                      {(selectedPoll.recipients || []).map((r, i) => (
+                        <div key={r} className="text-[10px] text-slate-500">{r}</div>
                       ))}
                     </div>
                   </details>

@@ -40,7 +40,7 @@ export default function PastoralVisitsModule({ members }: PastoralVisitsModulePr
   const memberFiltered = useMemo(() => {
     if (!formData.memberSearch.trim()) return [];
     const q = formData.memberSearch.toLowerCase();
-    return members.filter(m => m.name.toLowerCase().includes(q)).slice(0, 10);
+    return members.filter(m => (m.name || '').toLowerCase().includes(q)).slice(0, 10);
   }, [members, formData.memberSearch]);
 
   useEffect(() => {
@@ -48,9 +48,22 @@ export default function PastoralVisitsModule({ members }: PastoralVisitsModulePr
     const unsub = onSnapshot(q, (snapshot) => {
       const arr: PastoralVisit[] = [];
       snapshot.forEach((doc) => {
-        arr.push({ id: doc.id, ...doc.data() } as PastoralVisit);
+        const d = doc.data();
+        arr.push({
+          id: doc.id,
+          memberId: d.memberId || '',
+          memberName: d.memberName || '',
+          visitDate: d.visitDate || '',
+          visitType: d.visitType || '',
+          purpose: d.purpose || '',
+          report: d.report || '',
+          prayerNeeds: d.prayerNeeds || '',
+          pastoralNotes: d.pastoralNotes || '',
+          visitedBy: d.visitedBy || '',
+          createdAt: d.createdAt || '',
+        } as PastoralVisit);
       });
-      arr.sort((a, b) => b.visitDate.localeCompare(a.visitDate));
+      arr.sort((a, b) => (b.visitDate || '').localeCompare(a.visitDate || ''));
       setVisits(arr);
     });
     return unsub;
@@ -97,7 +110,7 @@ export default function PastoralVisitsModule({ members }: PastoralVisitsModulePr
 
   const filteredVisits = useMemo(() => {
     return visits.filter(v => {
-      if (filterMember && !v.memberName.toLowerCase().includes(filterMember.toLowerCase())) return false;
+      if (filterMember && !(v.memberName || '').toLowerCase().includes(filterMember.toLowerCase())) return false;
       if (filterType && v.visitType !== filterType) return false;
       return true;
     });

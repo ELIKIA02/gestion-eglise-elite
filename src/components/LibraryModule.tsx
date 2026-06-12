@@ -30,12 +30,18 @@ export default function LibraryModule({ members }: LibraryModuleProps) {
   useEffect(() => {
     const unsubBooks = onSnapshot(query(collection(db, 'church_library')), (snapshot) => {
       const items: LibraryBook[] = [];
-      snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as LibraryBook));
+      snapshot.forEach(doc => {
+        const d = doc.data() as Record<string, any>;
+        items.push({ id: doc.id, ...d, title: d.title ?? '', author: d.author ?? '', quantity: d.quantity ?? 0 } as LibraryBook);
+      });
       setBooks(items);
     });
     const unsubLoans = onSnapshot(query(collection(db, 'church_loans')), (snapshot) => {
       const items: BookLoan[] = [];
-      snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as BookLoan));
+      snapshot.forEach(doc => {
+        const d = doc.data() as Record<string, any>;
+        items.push({ id: doc.id, ...d, borrowDate: d.borrowDate ?? '', dueDate: d.dueDate ?? '' } as BookLoan);
+      });
       setLoans(items);
     });
     return () => { unsubBooks(); unsubLoans(); };
@@ -43,19 +49,19 @@ export default function LibraryModule({ members }: LibraryModuleProps) {
 
   const activeLoans = useMemo(() => loans.filter(l => l.status === 'en cours' || l.status === 'retard'), [loans]);
 
-  const getAvailable = (bookId: string, quantity: number) => {
+  const getAvailable = (bookId: string, quantity?: number | null) => {
     const borrowed = activeLoans.filter(l => l.bookId === bookId).length;
-    return quantity - borrowed;
+    return (quantity || 0) - borrowed;
   };
 
   const filteredBooks = useMemo(() => {
     const q = bookSearch.toLowerCase();
-    return books.filter(b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+    return books.filter(b => (b.title || '').toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q));
   }, [books, bookSearch]);
 
   const filteredLoanBooks = useMemo(() => {
     const q = loanBookSearch.toLowerCase();
-    return books.filter(b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+    return books.filter(b => (b.title || '').toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q));
   }, [books, loanBookSearch]);
 
   const filteredMembers = useMemo(() => {
@@ -136,7 +142,11 @@ export default function LibraryModule({ members }: LibraryModuleProps) {
   const todayStr = new Date().toISOString().substring(0, 10);
 
   const sortedLoans = useMemo(() => {
-    return [...loans].sort((a, b) => new Date(b.borrowDate).getTime() - new Date(a.borrowDate).getTime());
+    return [...loans].sort((a, b) => {
+      const aTime = a.borrowDate ? new Date(a.borrowDate).getTime() : 0;
+      const bTime = b.borrowDate ? new Date(b.borrowDate).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [loans]);
 
   return (

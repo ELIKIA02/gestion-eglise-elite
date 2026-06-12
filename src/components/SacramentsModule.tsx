@@ -62,7 +62,7 @@ export default function SacramentsModule({ members, settings }: SacramentsModule
       const data: SacramentEntry[] = [];
       snapshot.forEach((doc: any) => {
         const d = doc.data();
-        data.push({ id: doc.id, ...d });
+        data.push({ id: doc.id, type: d.type || '', memberName: d.memberName || '', memberId: d.memberId || '', date: d.date || '', location: d.location || '', officiant: d.officiant || '', witnesses: d.witnesses || '', notes: d.notes || '', certificateNumber: d.certificateNumber || '', createdAt: d.createdAt || '' });
       });
       data.sort((a, b) => b.createdAt?.localeCompare?.(a.createdAt) || 0);
       setEntries(data);
@@ -74,7 +74,7 @@ export default function SacramentsModule({ members, settings }: SacramentsModule
   const filteredEntries = useMemo(() => {
     return entries.filter(e => {
       if (filterType && e.type !== filterType) return false;
-      if (searchQuery && !e.memberName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery && !(e.memberName || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
   }, [entries, filterType, searchQuery]);
@@ -82,7 +82,7 @@ export default function SacramentsModule({ members, settings }: SacramentsModule
   const filteredMembers = useMemo(() => {
     if (!memberSearch.trim()) return members.slice(0, 10);
     return members.filter(m =>
-      m.name.toLowerCase().includes(memberSearch.toLowerCase())
+      (m.name || '').toLowerCase().includes(memberSearch.toLowerCase())
     ).slice(0, 10);
   }, [members, memberSearch]);
 

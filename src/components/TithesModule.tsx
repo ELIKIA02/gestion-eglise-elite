@@ -67,14 +67,14 @@ export default function TithesModule({ members }: TithesModuleProps) {
   const filteredMembers = useMemo(() => {
     const q = searchMember.toLowerCase();
     return members.filter(m =>
-      m.name.toLowerCase().includes(q) || m.phone.includes(q)
+      (m.name || '').toLowerCase().includes(q) || (m.phone || '').includes(q)
     ).slice(0, 10);
   }, [members, searchMember]);
 
   const filteredFilterMembers = useMemo(() => {
     const q = filterMemberSearch.toLowerCase();
     return members.filter(m =>
-      m.name.toLowerCase().includes(q) || m.phone.includes(q)
+      (m.name || '').toLowerCase().includes(q) || (m.phone || '').includes(q)
     ).slice(0, 10);
   }, [members, filterMemberSearch]);
 

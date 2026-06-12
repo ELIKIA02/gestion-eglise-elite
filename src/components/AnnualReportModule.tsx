@@ -41,14 +41,14 @@ export default function AnnualReportModule({ members, transactions, events, sett
     const enObservation = members.filter(m => m.status === 'En observation').length;
 
     const yearStr = String(selectedYear);
-    const yearTx = transactions.filter(t => t.date.startsWith(yearStr));
+    const yearTx = transactions.filter(t => (t.date || '').startsWith(yearStr));
     const revenus = yearTx.filter(t => t.type === 'Revenu').reduce((s, t) => s + t.amount, 0);
     const depenses = yearTx.filter(t => t.type === 'Dépense').reduce((s, t) => s + t.amount, 0);
 
-    const totalCultes = events.filter(e => e.date.startsWith(yearStr)).length;
+    const totalCultes = events.filter(e => (e.date || '').startsWith(yearStr)).length;
     const nouveauxMembres = members.filter(m => m.arrivalDate?.startsWith(yearStr)).length;
-    const baptemes = sacraments.filter(s => s.type === 'Baptême' && s.date.startsWith(yearStr)).length;
-    const mariages = sacraments.filter(s => s.type === 'Mariage' && s.date.startsWith(yearStr)).length;
+    const baptemes = sacraments.filter(s => s.type === 'Baptême' && (s.date || '').startsWith(yearStr)).length;
+    const mariages = sacraments.filter(s => s.type === 'Mariage' && (s.date || '').startsWith(yearStr)).length;
 
     const monthlyMap: Record<string, { month: string; revenus: number; depenses: number }> = {};
     for (let m = 0; m < 12; m++) {
@@ -58,7 +58,7 @@ export default function AnnualReportModule({ members, transactions, events, sett
       monthlyMap[key] = { month: label, revenus: 0, depenses: 0 };
     }
     yearTx.forEach(t => {
-      const ym = t.date.substring(0, 7);
+      const ym = (t.date || '').substring(0, 7);
       if (monthlyMap[ym]) {
         if (t.type === 'Revenu') monthlyMap[ym].revenus += t.amount;
         else monthlyMap[ym].depenses += t.amount;
@@ -338,7 +338,7 @@ export default function AnnualReportModule({ members, transactions, events, sett
                   />
                 </div>
                 <span className="text-[8px] text-slate-400 dark:text-slate-500 mt-1 text-center leading-tight">
-                  {d.month.substring(0, 3)}
+                   {(d.month || '').substring(0, 3)}
                 </span>
               </div>
             );

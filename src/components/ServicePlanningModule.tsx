@@ -59,7 +59,7 @@ export default function ServicePlanningModule() {
     const ref = query(collection(db, COLLECTION));
     const unsub = onSnapshot(ref, (snapshot) => {
       const data: ServicePlanning[] = [];
-      snapshot.forEach((doc) => { data.push({ id: doc.id, ...doc.data() } as ServicePlanning); });
+      snapshot.forEach((doc) => { const d = doc.data() || {}; data.push({ id: doc.id, date: d.date || '', serviceType: d.serviceType || 'Culte du dimanche', preacher: d.preacher || '', theme: d.theme || '', bibleText: d.bibleText || '', worshipLead: d.worshipLead || '', choir: d.choir || '', intercession: d.intercession || '', announcements: d.announcements || '', notes: d.notes || '', createdAt: d.createdAt || '' } as ServicePlanning); });
       setServices(data);
       setLoading(false);
     }, (err) => { handleFirestoreError(err, OperationType.LIST, COLLECTION); setLoading(false); });
@@ -147,7 +147,8 @@ export default function ServicePlanningModule() {
         notes: form.notes.trim(),
       };
       if (editingService) {
-        await updateDoc(doc(db, COLLECTION, editingService.id!), { ...data, updatedAt: new Date().toISOString() });
+        if (!editingService.id) return;
+        await updateDoc(doc(db, COLLECTION, editingService.id), { ...data, updatedAt: new Date().toISOString() });
       } else {
         await addDoc(collection(db, COLLECTION), { ...data, createdAt: new Date().toISOString() });
       }
@@ -158,6 +159,7 @@ export default function ServicePlanningModule() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Supprimer cette planification ?')) return;
+    if (!id) return;
     try { await deleteDoc(doc(db, COLLECTION, id)); } catch (err) { handleFirestoreError(err, OperationType.DELETE, `${COLLECTION}/${id}`); }
   };
 
@@ -166,7 +168,7 @@ export default function ServicePlanningModule() {
   const futureServices = useMemo(() => {
     return [...services]
       .filter(s => s.date >= todayStr)
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   }, [services, todayStr]);
 
   const serviceTypeColor = (type: string) => {
