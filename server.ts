@@ -558,7 +558,11 @@ async function startServer() {
 
       const targetPhone = process.env.CHURCH_WHATSAPP || '';
       try {
-        if (targetPhone) await sendMessage(targetPhone, message);
+        if (targetPhone) {
+          await sendMessage(targetPhone, message);
+          const jsonBuffer = Buffer.from(JSON.stringify({ data: { name: data.name, email: data.email || '', phone: data.phone || '', birthday: data.birthday || '', birthPlace: data.birthPlace || '', nationality: data.nationality || '', gender: data.gender || '', maritalStatus: data.maritalStatus || '', profession: data.profession || '', address: data.address || '' } }, null, 2), 'utf-8');
+          await sendDocumentMessage(targetPhone, jsonBuffer, `Fiche-${data.name.replace(/[^a-zA-Z0-9]/g, '_')}.json`, 'application/json');
+        }
       } catch (e) {
         console.error("[FORM] Échec envoi WhatsApp:", e);
       }
