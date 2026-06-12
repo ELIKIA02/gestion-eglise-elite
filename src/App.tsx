@@ -287,6 +287,7 @@ export default function App() {
       theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-slate-50 text-slate-800'
     }`}>
       <style>{`
+        html, body { overscroll-behavior: none; }
         @media (max-width: 767px) {
           button, a, select, input[type="button"], input[type="submit"] {
             touch-action: manipulation;
@@ -373,7 +374,7 @@ export default function App() {
       </aside>
 
       {/* Main */}
-      <main className={`flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 ${isMobile ? 'pb-20' : ''}`}>
+      <main className={`flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 ${isMobile ? 'pb-24' : ''}`}>
         <div className={`p-6 md:p-8 rounded-xl border min-h-[500px] transition-colors duration-300 ${
           theme === 'dark' ? 'bg-slate-800 border-slate-700 shadow-md' : 'bg-white border-slate-200 shadow-md shadow-slate-100/40'
         }`}>
@@ -437,7 +438,7 @@ export default function App() {
       {/* Mobile bottom tab bar */}
       {isMobile && (
         <>
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 pb-safe">
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 pb-safe min-h-[56px] shadow-lg shadow-black/20">
             {MAIN_TABS.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
