@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { collection, onSnapshot, query, addDoc, deleteDoc, doc, db } from '../firebase';
-import { Member } from '../types';
+import { Member, Department } from '../types';
 import { CheckCheck, X, Users, Calendar, TrendingUp, BarChart3, Plus, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AttendanceRecord {
@@ -20,6 +20,7 @@ const EVENT_TYPES = [
 export default function PresenceModule() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -50,8 +51,20 @@ export default function PresenceModule() {
       setMembers(items);
     }, () => {});
 
-    return () => { unsubRecords(); unsubMembers(); };
+    const unsubDepts = onSnapshot(query(collection(db, 'church_departments')), (snapshot) => {
+      const items: Department[] = [];
+      snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() } as Department));
+      setDepartments(items);
+    }, () => {});
+
+    return () => { unsubRecords(); unsubMembers(); unsubDepts(); };
   }, []);
+
+  const deptNames = useMemo(() => new Set(departments.map(d => d.name.toLowerCase())), [departments]);
+
+  const departmentMembers = useMemo(() =>
+    members.filter(m => (m.status === 'Actif' || m.status === 'En observation') && m.ministry && deptNames.has(m.ministry.toLowerCase())),
+  [members, deptNames]);
 
   const monthRecords = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -63,7 +76,7 @@ export default function PresenceModule() {
     const totalSessions = monthRecords.length;
     const totalPresent = monthRecords.reduce((s, r) => s + r.presentMemberIds.length, 0);
     const avgAttendance = totalSessions > 0 ? Math.round(totalPresent / totalSessions) : 0;
-    const totalMembers = members.filter(m => m.status === 'Actif' || m.status === 'En observation').length;
+    const totalMembers = departmentMembers.length;
 
     const memberAttendance: Record<string, number> = {};
     monthRecords.forEach(r => {
@@ -73,7 +86,7 @@ export default function PresenceModule() {
     });
 
     return { totalSessions, totalPresent, avgAttendance, totalMembers, memberAttendance };
-  }, [monthRecords, members]);
+  }, [monthRecords, departmentMembers]);
 
   const openAdd = () => {
     const d = new Date();
@@ -115,29 +128,25 @@ export default function PresenceModule() {
     if (formSelectAll) {
       setFormPresent(new Set());
     } else {
-      setFormPresent(new Set(members.filter(m => m.status === 'Actif').map(m => m.id).filter(Boolean) as string[]));
+      setFormPresent(new Set(departmentMembers.map(m => m.id).filter(Boolean) as string[]));
     }
     setFormSelectAll(!formSelectAll);
   };
 
-  const activeMembers = useMemo(() =>
-    members.filter(m => m.status === 'Actif' || m.status === 'En observation'),
-  [members]);
-
   const filteredMembers = useMemo(() => {
-    if (!searchTerm) return activeMembers;
+    if (!searchTerm) return departmentMembers;
     const term = searchTerm.toLowerCase();
-    return activeMembers.filter(m =>
+    return departmentMembers.filter(m =>
       m.name.toLowerCase().includes(term) || (m.ministry && m.ministry.toLowerCase().includes(term))
     );
-  }, [activeMembers, searchTerm]);
+  }, [departmentMembers, searchTerm]);
 
   const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
-  const totalMembers = members.filter(m => m.status === 'Actif' || m.status === 'En observation').length;
+    const totalMembers = departmentMembers.length;
 
   return (
     <div className="space-y-6">
