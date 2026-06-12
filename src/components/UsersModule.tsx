@@ -355,7 +355,7 @@ export default function UsersModule() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-1 text-slate-300 dark:text-slate-600">
-                            <Lock className="w-3.5 h-3.5" title="Réservé aux administrateurs" />
+                            <Lock className="w-3.5 h-3.5" aria-label="Réservé aux administrateurs" />
                           </div>
                         )}
                       </td>

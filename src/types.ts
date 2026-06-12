@@ -169,3 +169,99 @@ export interface LiturgicalTheme {
   scheduled?: boolean;
   createdAt: string;
 }
+
+export interface TitheRecord {
+  id?: string;
+  memberId: string;
+  memberName: string;
+  amount: number;
+  date: string;
+  type: 'Dîme' | 'Offrande' | 'Don';
+  notes?: string;
+  createdAt: string;
+}
+
+export interface PastoralVisit {
+  id?: string;
+  memberId: string;
+  memberName: string;
+  visitDate: string;
+  visitType: 'Visite domicile' | 'Visite hôpital' | 'Visite prison' | 'Accompagnement' | 'Autre';
+  purpose: string;
+  report: string;
+  prayerNeeds: string;
+  pastoralNotes: string;
+  visitedBy: string;
+  createdAt: string;
+}
+
+export interface Poll {
+  id?: string;
+  question: string;
+  options: PollOption[];
+  status: 'draft' | 'sent' | 'closed';
+  recipients: string[];
+  createdAt: string;
+  sentAt?: string;
+}
+
+export interface PollOption {
+  id: string;
+  label: string;
+  votes: number;
+}
+
+export interface SacramentRegister {
+  id?: string;
+  type: 'Baptême' | 'Mariage' | 'Profession de foi' | 'Dédicace';
+  memberName: string;
+  memberId?: string;
+  date: string;
+  location: string;
+  officiant: string;
+  witnesses?: string;
+  notes?: string;
+  certificateNumber: string;
+  createdAt: string;
+}
+
+export interface ServicePlanning {
+  id?: string;
+  date: string;
+  serviceType: 'Culte du dimanche' | 'École du dimanche' | 'Étude biblique' | 'Jeûne' | 'Veillée' | 'Autre';
+  preacher: string;
+  theme: string;
+  bibleText: string;
+  worshipLead: string;
+  choir: string;
+  intercession: string;
+  announcements: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface LibraryBook {
+  id?: string;
+  title: string;
+  author: string;
+  category: string;
+  quantity: number;
+  available: number;
+  location: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface BookLoan {
+  id?: string;
+  bookId: string;
+  bookTitle: string;
+  memberId: string;
+  memberName: string;
+  borrowDate: string;
+  dueDate: string;
+  returnDate?: string;
+  status: 'en cours' | 'retourné' | 'retard';
+  notes?: string;
+  createdAt: string;
+}

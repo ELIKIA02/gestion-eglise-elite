@@ -18,10 +18,18 @@ import DocumentsModule from './components/DocumentsModule';
 import UsersModule from './components/UsersModule';
 import LiturgicalThemesModule from './components/LiturgicalThemesModule';
 import PresenceModule from './components/PresenceModule';
+import AnniversariesModule from './components/AnniversariesModule';
+import TithesModule from './components/TithesModule';
+import PastoralVisitsModule from './components/PastoralVisitsModule';
+import PollsModule from './components/PollsModule';
+import SacramentsModule from './components/SacramentsModule';
+import AnnualReportModule from './components/AnnualReportModule';
+import ServicePlanningModule from './components/ServicePlanningModule';
+import LibraryModule from './components/LibraryModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark, UserCheck, Gift, HandCoins, HeartHandshake, Vote, Church, Library } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -264,8 +272,16 @@ export default function App() {
     { id: 'departments', label: 'Départements', icon: Building2, count: departments.length },
     { id: 'finances', label: 'Trésorerie', icon: CreditCard },
     { id: 'cultes', label: 'Cultes & Activités', icon: CalendarDays },
+    { id: 'serviceplanning', label: 'Planning Cultes', icon: CalendarDays },
     { id: 'presence', label: 'Présence', icon: UserCheck },
     { id: 'comms', label: 'Communications', icon: MessageSquareText },
+    { id: 'anniversaries', label: 'Anniversaires', icon: Gift },
+    { id: 'tithes', label: 'Dîmes par Membre', icon: HandCoins },
+    { id: 'visits', label: 'Visites Pastorales', icon: HeartHandshake },
+    { id: 'polls', label: 'Sondages WhatsApp', icon: Vote },
+    { id: 'sacraments', label: 'Registre', icon: Church },
+    { id: 'library', label: 'Bibliothèque', icon: Library },
+    { id: 'rapport', label: 'Rapport Annuel', icon: FileBarChart2 },
     { id: 'ia', label: 'Assistant IA', icon: Sparkles },
     { id: 'enseignement', label: 'Enseignement', icon: BookOpen },
     { id: 'liturgical', label: 'Thèmes Liturgiques', icon: Bookmark },
@@ -427,6 +443,30 @@ export default function App() {
           )}
           {activeTab === 'reports' && (
             <ReportsModule transactions={transactions} events={events} members={members} settings={settings} />
+          )}
+          {activeTab === 'anniversaries' && (
+            <AnniversariesModule members={members} settings={settings} />
+          )}
+          {activeTab === 'tithes' && (
+            <TithesModule members={members} />
+          )}
+          {activeTab === 'visits' && (
+            <PastoralVisitsModule members={members} />
+          )}
+          {activeTab === 'polls' && (
+            <PollsModule members={members} />
+          )}
+          {activeTab === 'sacraments' && (
+            <SacramentsModule members={members} settings={settings} />
+          )}
+          {activeTab === 'library' && (
+            <LibraryModule members={members} />
+          )}
+          {activeTab === 'rapport' && (
+            <AnnualReportModule members={members} transactions={transactions} events={events} settings={settings} />
+          )}
+          {activeTab === 'serviceplanning' && (
+            <ServicePlanningModule />
           )}
           {activeTab === 'settings' && (
             <SettingsModule settings={settings} loading={loadingSettings} onRefresh={() => {}} />
