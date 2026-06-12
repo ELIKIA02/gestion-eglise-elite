@@ -234,9 +234,8 @@ ${content}
         </div>
       );
       const checkbox = (label: string) => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginRight: '16px', fontSize: '9pt' }}>
-          <span style={{ width: '14px', height: '14px', border: `2px solid ${T.color}`, borderRadius: '3px', display: 'inline-block' }}></span>
-          {label}
+        <span style={{ marginRight: '14px', fontSize: '9pt', whiteSpace: 'nowrap' }}>
+          ☐ {label}
         </span>
       );
 
@@ -505,9 +504,8 @@ ${content}
             );
           case 'renseignement': {
             const _chk = (label: string) => (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '10px', fontSize: '7.5pt', whiteSpace: 'nowrap' }}>
-                <span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.color}`, borderRadius: '2px', display: 'inline-block' }}></span>
-                {label}
+              <span style={{ marginRight: '12px', fontSize: '10pt', whiteSpace: 'nowrap' }}>
+                ☐ {label}
               </span>
             );
             const _cell = (label: string) => (
