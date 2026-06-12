@@ -711,11 +711,19 @@ ${content}
 
       const singleFiche = () => {
         const isA5 = a5Mode && ficheType === 'renseignement';
+        const docStyle = {
+          ...S.doc,
+          maxWidth: isA5 ? '100%' : '800px',
+          padding: isA5 ? '6px 10px' : '30px',
+          fontSize: isA5 ? '7pt' : undefined,
+        } as React.CSSProperties;
         return (
-          <div style={S.doc}>
+          <div style={docStyle}>
             <div style={S.borderDecor}>
               {!isA5 && <HeaderBlock />}
-              {ficheContent()}
+              <div style={isA5 ? { fontSize: '7pt' } : {}}>
+                {ficheContent()}
+              </div>
               {ficheType !== 'renseignement' && (
                 <div style={{ marginTop: '28px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
@@ -730,8 +738,8 @@ ${content}
                 </div>
               )}
               {isA5 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px', paddingTop: '6px', borderTop: `1px solid ${T.border}`, fontSize: '6pt', color: '#94a3b8' }}>
-                  {isImage ? <img src={logo} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} /> : <span style={{ fontSize: '12px' }}>{logo}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px', paddingTop: '4px', borderTop: `1px solid ${T.border}`, fontSize: '5.5pt', color: '#94a3b8' }}>
+                  {isImage ? <img src={logo} alt="" style={{ width: '12px', height: '12px', objectFit: 'contain' }} /> : <span style={{ fontSize: '10px' }}>{logo}</span>}
                   <span>{appName}</span>
                   <span>·</span>
                   <span>{ref}</span>
@@ -744,19 +752,10 @@ ${content}
       };
 
       if (a5Mode && ficheType === 'renseignement') {
-        const scale = 0.68;
         return (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100/scale}%` }}>
-                {singleFiche()}
-              </div>
-            </div>
-            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: `${100/scale}%` }}>
-                {singleFiche()}
-              </div>
-            </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>{singleFiche()}</div>
           </div>
         );
       }
