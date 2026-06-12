@@ -115,7 +115,9 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
 
   const openAdd = () => {
     setEditingTheme(null);
-    setFormTitle(''); setFormDate(new Date().toISOString().substring(0, 10));
+    const today = new Date();
+    const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setFormTitle(''); setFormDate(localDate);
     setFormPreacher(''); setFormBibleText(''); setFormDescription('');
     setFormSeason(''); setFormThemeType(typesList[0] || 'Dimanche'); setFormHymns(''); setFormScheduled(false);
     setShowModal(true);
