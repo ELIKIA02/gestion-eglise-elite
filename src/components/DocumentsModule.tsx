@@ -694,15 +694,6 @@ ${content}
                     </td>
                   </tr>
                 </table>
-
-                <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '8pt' }}>
-                  <colgroup>
-                    <col style={{ width: '50%' }} />
-                    <col style={{ width: '50%' }} />
-                  </colgroup>
-                  <tr><td colSpan={2} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>Observations</td></tr>
-                  <tr><td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '8px', minHeight: '70px', verticalAlign: 'top' }}><div style={{ minHeight: '65px' }}></div></td></tr>
-                </table>
               </div>
             );
           }
