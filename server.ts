@@ -475,12 +475,13 @@ async function startServer() {
   .section h2{font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
   .field{margin-bottom:12px}
   .field label{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:3px}
-  .field input,.field select,.field textarea{width:100%;padding:10px 12px;font-size:14px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;outline:none;transition:border-color .2s;-webkit-appearance:none}
-  .field input:focus,.field select:focus,.field textarea:focus{border-color:#4f46e5}
-  .field textarea{resize:vertical;min-height:70px;font-family:inherit}
-  .field .radio-group{display:flex;gap:16px;padding-top:4px}
-  .field .radio-group label{font-size:14px;font-weight:400;display:flex;align-items:center;gap:6px;cursor:pointer}
-  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  .field input,.field select{width:100%;padding:12px;font-size:15px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;outline:none;-webkit-appearance:none;appearance:none}
+  .field input:focus,.field select:focus{border-color:#4f46e5}
+  .field .radio-group{display:flex;gap:8px;padding-top:2px}
+  .field .radio-group label{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center;background:#f8fafc;transition:all .15s;user-select:none;-webkit-user-select:none}
+  .field .radio-group label:has(input:checked){border-color:#4f46e5;background:#eef2ff;color:#4f46e5;font-weight:600}
+  .field .radio-group input[type="radio"]{width:18px;height:18px;accent-color:#4f46e5;margin:0;cursor:pointer}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
   .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0;display:flex;gap:8px;box-shadow:0 -2px 10px rgba(0,0,0,.05);z-index:100}
   .actions button{flex:1;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .15s}
   .actions button:active{opacity:.7}
@@ -514,7 +515,7 @@ async function startServer() {
     </div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label>Profession</label><input type="text" id="profession" placeholder="Votre métier"></div>
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="phone" placeholder="+242 XX XXX XXXX"></div>
+      <div style="flex:1"><label>Téléphone *</label><input type="tel" id="phone" placeholder="+242 XX XXX XXXX" required></div>
     </div>
     <div class="field" style="display:flex;gap:10px">
       <div style="flex:1"><label>Email</label><input type="email" id="email" placeholder="exemple@email.com"></div>
@@ -522,41 +523,9 @@ async function startServer() {
     </div>
   </div>
 
-  <div class="section"><h2>Vie Spirituelle</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date de Conversion</label><input type="date" id="conversionDate"></div>
-      <div style="flex:1"><label>Ancienne Église</label><input type="text" id="formerChurch" placeholder="Si applicable"></div>
-    </div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date d'Arrivée</label><input type="date" id="arrivalDate"></div>
-      <div style="flex:1"><label>Baptisé</label><select id="baptized"><option value="">Sélectionnez...</option><option>Oui</option><option>Non</option></select></div>
-    </div>
-    <div class="field"><label>Date de Baptême</label><input type="date" id="baptismDate"></div>
-  </div>
-
-  <div class="section"><h2>Engagement</h2>
-    <div class="field"><label>Talents / Dons</label><textarea id="talents" placeholder="Chant, enseignement, intercession, etc."></textarea></div>
-    <div class="field"><label>Motivation</label><textarea id="motivation" placeholder="Pourquoi souhaitez-vous vous engager ?"></textarea></div>
-  </div>
-
-  <div class="section"><h2>Famille</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Conjoint(e)</label><input type="text" id="spouseName" placeholder="Nom complet"></div>
-      <div style="flex:1"><label>Nombre d'Enfants</label><input type="text" id="childrenCount" placeholder="Ex: 3"></div>
-    </div>
-    <div class="field"><label>Âges des Enfants</label><input type="text" id="childrenAges" placeholder="Ex: 5, 8, 12 ans"></div>
-  </div>
-
-  <div class="section"><h2>Contact d'Urgence</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="emergencyPhone" placeholder="+242 XX XXX XXXX"></div>
-      <div style="flex:1"><label>Nom du Contact</label><input type="text" id="emergencyContact" placeholder="Mère, père, etc."></div>
-    </div>
-  </div>
   <div style="height:80px"></div>
 </div>
 <div class="actions">
-  <button class="btn-download" id="dlBtn">📥 Télécharger ma fiche</button>
   <button class="btn-send" id="sendBtn">📤 Envoyer à l'Église</button>
 </div>
 <div id="toast" class="toast"></div>
@@ -566,19 +535,15 @@ function g(i){return document.getElementById(i)}
 function v(i){const e=g(i);return e?e.value:''}
 function rv(n){const e=document.querySelector('input[name="'+n+'"]:checked');return e?e.value:''}
 function st(m,e){const t=g('toast');if(!t)return;t.textContent=m;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(function(){t.style.display='none'},5000)}
-function gd(){return{name:v('name'),email:v('email'),phone:v('phone'),birthday:v('birthday'),birthPlace:v('birthPlace'),nationality:v('nationality'),gender:rv('gender'),maritalStatus:v('maritalStatus'),profession:v('profession'),address:v('address'),conversionDate:v('conversionDate'),formerChurch:v('formerChurch'),arrivalDate:v('arrivalDate'),baptized:v('baptized'),baptismDate:v('baptismDate'),talents:v('talents'),motivation:v('motivation'),spouseName:v('spouseName'),childrenCount:v('childrenCount'),childrenAges:v('childrenAges'),emergencyPhone:v('emergencyPhone'),emergencyContact:v('emergencyContact')}}
-function dl(){var d=gd();if(!d.name.trim()){st('Veuillez remplir le nom',true);return}
-  var b=new Blob([JSON.stringify({data:d},null,2)],{type:'application/json'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiche-renseignement-'+Date.now()+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);st('✅ Fichier téléchargé !')}
+function gd(){return{name:v('name'),birthday:v('birthday'),birthPlace:v('birthPlace'),nationality:v('nationality'),gender:rv('gender'),maritalStatus:v('maritalStatus'),profession:v('profession'),phone:v('phone'),email:v('email'),address:v('address')}}
 async function sf(){var d=gd();if(!d.name.trim()){st('Veuillez remplir le nom',true);return}
+  if(!d.phone.trim()){st('Veuillez remplir le téléphone',true);return}
   var btn=g('sendBtn');if(!btn)return;btn.innerHTML='<span class="spinner"></span> Envoi...';btn.disabled=true;
   try{var r=await fetch('/api/renseignement/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:d})});
-    var j=await r.json();if(j.success){st('✅ Fiche envoyée avec succès !');dl()}else{st('❌ '+(j.error||'Erreur'),true)}
+    var j=await r.json();if(j.success){st('✅ Fiche envoyée avec succès !')}else{st('❌ '+(j.error||'Erreur'),true)}
   }catch(e){st('❌ Problème de connexion. Vérifiez votre connexion internet.',true)}
   btn.innerHTML='📤 Envoyer à l\'Église';btn.disabled=false}
 g('sendBtn').onclick=sf;
-g('dlBtn').onclick=dl;
 })();
 <\/script>
 </body>

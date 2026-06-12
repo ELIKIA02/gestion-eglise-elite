@@ -238,7 +238,7 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: [{ phone, name: phone }],
-          text: `📋 *Formulaire de Renseignement — Nouveau Membre*\n\nCliquez sur le lien ci-dessous pour remplir votre fiche d'information :\n\n${formUrl}\n\nAprès avoir rempli, appuyez sur « Envoyer à l'Église » pour nous transmettre vos données directement par WhatsApp.\n\nMerci et que Dieu vous bénisse ! 🙏`
+          text: `📋 *Formulaire d\'Information — Nouveau Membre*\n\nCliquez sur le lien ci-dessous pour renseigner vos informations (État civil uniquement) :\n\n${formUrl}\n\nAprès avoir rempli, appuyez sur « Envoyer à l\'Église » pour nous transmettre vos données.\n\nMerci et que Dieu vous bénisse ! 🙏`
         }),
       });
       const data = await res.json();
@@ -860,7 +860,7 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
       {/* Envoyer Formulaire Renseignement */}
       <div className="bg-white rounded-xl border border-orange-200 shadow-xs overflow-hidden">
         <div className="bg-orange-50 px-5 py-3 border-b border-orange-100 flex items-center justify-between">
-          <h3 className="font-bold text-sm text-orange-900 flex items-center gap-2"><FileText className="w-4 h-4" /> Envoyer Formulaire Renseignement</h3>
+          <h3 className="font-bold text-sm text-orange-900 flex items-center gap-2"><FileText className="w-4 h-4" /> Envoyer Formulaire (État Civil)</h3>
           <span className="text-[10px] text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full font-semibold">Nouveau</span>
         </div>
         <div className="p-4 space-y-3">
