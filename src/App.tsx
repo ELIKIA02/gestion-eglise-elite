@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, onSnapshot, query, db, loadFromServer } from './firebase';
-import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department, AppNotification } from './types';
+import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department, AppNotification, AppUser, LiturgicalTheme } from './types';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardModule from './components/DashboardModule';
@@ -15,10 +15,12 @@ import ReportsModule from './components/ReportsModule';
 import SettingsModule from './components/SettingsModule';
 import EnseignementModule from './components/EnseignementModule';
 import DocumentsModule from './components/DocumentsModule';
+import UsersModule from './components/UsersModule';
+import LiturgicalThemesModule from './components/LiturgicalThemesModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -264,7 +266,9 @@ export default function App() {
     { id: 'comms', label: 'Communications', icon: MessageSquareText },
     { id: 'ia', label: 'Assistant IA', icon: Sparkles },
     { id: 'enseignement', label: 'Enseignement', icon: BookOpen },
+    { id: 'liturgical', label: 'Thèmes Liturgiques', icon: Bookmark },
     { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'users', label: 'Utilisateurs', icon: Shield },
     { id: 'audit', label: 'Audit Église', icon: ClipboardCheck },
     { id: 'reports', label: 'Rapports & Exports', icon: FileBarChart2 },
     { id: 'settings', label: 'Paramètres', icon: Settings },
@@ -402,8 +406,14 @@ export default function App() {
           {activeTab === 'enseignement' && (
             <EnseignementModule settings={settings} members={members} departments={departments} />
           )}
+          {activeTab === 'liturgical' && (
+            <LiturgicalThemesModule />
+          )}
           {activeTab === 'documents' && (
             <DocumentsModule settings={settings} members={members} />
+          )}
+          {activeTab === 'users' && (
+            <UsersModule />
           )}
           {activeTab === 'audit' && (
             <ChurchReportModule settings={settings} members={members} transactions={transactions} events={events} />

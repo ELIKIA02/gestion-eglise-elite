@@ -123,3 +123,29 @@ export interface Enseignement {
   scheduledAt?: string;
   status: 'draft' | 'scheduled';
 }
+
+export type UserRole = 'admin' | 'secretaire' | 'tresorier' | 'pasteur' | 'lecture';
+
+export interface AppUser {
+  id?: string;
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  avatar?: string;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export interface LiturgicalTheme {
+  id?: string;
+  title: string;
+  date: string;
+  preacher: string;
+  bibleText: string;
+  description: string;
+  themeType: 'dimanche' | 'mercredi' | 'special' | 'jeune' | 'seminaire';
+  season?: 'avent' | 'careme' | 'paques' | 'pentecote' | 'ordinaire' | 'noel';
+  hymns?: string;
+  createdAt: string;
+}

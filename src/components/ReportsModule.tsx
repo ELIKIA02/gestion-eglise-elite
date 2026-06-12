@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FinanceTransaction, ChurchEvent, Member, ChurchSettings } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { FileDown, Printer, TrendingUp, Users, DollarSign, Calendar, Download, Filter, BarChart3 } from 'lucide-react';
+import { FileDown, Printer, TrendingUp, Users, DollarSign, Calendar, Download, Filter, BarChart3, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface ReportsModuleProps {
@@ -278,6 +278,74 @@ export default function ReportsModule({ transactions, events, members, settings 
     }
   };
 
+  const exportFullPDF = () => {
+    const memberRows = members.map(m =>
+      `<tr><td>${m.name}</td><td>${m.phone}</td><td>${m.status}</td><td>${m.ministry || '-'}</td></tr>`
+    ).join('');
+
+    const financeRows = transactions.filter(t => parseInt(t.date.substring(0, 4)) === parseInt(selectedYear)).map(t =>
+      `<tr><td>${t.date}</td><td>${t.type}</td><td>${t.category}</td><td style="text-align:right">${formatFCFA(t.amount)}</td></tr>`
+    ).join('');
+
+    const eventRows = events.filter(e => parseInt(e.date.substring(0, 4)) === parseInt(selectedYear)).map(e =>
+      `<tr><td>${e.date}</td><td>${e.title}</td><td>${e.attendance || 0}</td><td>${e.preacher || '-'}</td></tr>`
+    ).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rapport Complet ${selectedYear}</title>
+    <style>
+      @page { margin: 15mm; }
+      body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #333; font-size: 11px; }
+      h1 { color: #4F46E5; text-align: center; font-size: 20px; border-bottom: 2px solid #4F46E5; padding-bottom: 8px; }
+      h2 { color: #1e293b; font-size: 14px; margin-top: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+      .header { text-align: center; margin-bottom: 20px; }
+      .header img { width: 48px; height: 48px; object-fit: contain; vertical-align: middle; }
+      .header .name { font-size: 18px; font-weight: bold; color: #4F46E5; }
+      table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10px; }
+      th { background: #4F46E5; color: white; padding: 6px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+      td { border: 1px solid #e2e8f0; padding: 5px; }
+      tr:nth-child(even) { background: #f8fafc; }
+      .kpi { display: inline-block; border: 1px solid #e2e8f0; padding: 10px; margin: 5px; text-align: center; min-width: 120px; border-radius: 6px; }
+      .kpi-val { font-size: 16px; font-weight: bold; color: #4F46E5; }
+      .footer { text-align: center; margin-top: 30px; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+      .page-break { page-break-before: always; }
+    </style></head><body>
+    <div class="header">
+      ${settings?.appLogo?.startsWith('data:image') ? `<img src="${settings.appLogo}" alt="Logo" />` : (settings?.appLogo || '⛪')}
+      <div class="name">${settings?.appName || 'ELIKIA EKLESIA'}</div>
+      <div style="font-size:10px;color:#64748b;">${settings?.reportHeader?.split('\n')[0] || ''}</div>
+    </div>
+    <h1>Rapport Complet ${selectedYear}</h1>
+    <p style="text-align:center;font-size:10px;color:#94a3b8;">Généré le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    <div style="text-align:center;margin:15px 0;">
+      <span class="kpi"><div>Membres</div><div class="kpi-val">${members.length}</div></span>
+      <span class="kpi"><div>Revenus</div><div class="kpi-val">${formatFCFA(reportStats.annualRevenue)}</div></span>
+      <span class="kpi"><div>Dépenses</div><div class="kpi-val">${formatFCFA(reportStats.annualExpense)}</div></span>
+      <span class="kpi"><div>Solde</div><div class="kpi-val" style="color:${reportStats.netBalance >= 0 ? '#10B981' : '#EF4444'}">${formatFCFA(reportStats.netBalance)}</div></span>
+      <span class="kpi"><div>Cultes</div><div class="kpi-val">${reportStats.totalServices}</div></span>
+      <span class="kpi"><div>Moy. assistance</div><div class="kpi-val">${reportStats.avgAttendance}</div></span>
+    </div>
+    <h2>👥 Liste des membres</h2>
+    <table><thead><tr><th>Nom</th><th>Téléphone</th><th>Statut</th><th>Ministère</th></tr></thead><tbody>${memberRows}</tbody></table>
+    <p style="font-size:9px;color:#94a3b8;">Total: ${members.length} membres (${reportStats.activeMembers} actifs, ${reportStats.observationMembers} en observation)</p>
+    <div class="page-break"></div>
+    <h2>💰 Mouvements financiers (${selectedYear})</h2>
+    <table><thead><tr><th>Date</th><th>Type</th><th>Catégorie</th><th style="text-align:right">Montant</th></tr></thead><tbody>${financeRows}</tbody></table>
+    <p style="font-size:9px;color:#94a3b8;">Total recettes: ${formatFCFA(reportStats.annualRevenue)} · Total dépenses: ${formatFCFA(reportStats.annualExpense)}</p>
+    <div class="page-break"></div>
+    <h2>📅 Cultes et événements (${selectedYear})</h2>
+    <table><thead><tr><th>Date</th><th>Titre</th><th>Participants</th><th>Prédicateur</th></tr></thead><tbody>${eventRows}</tbody></table>
+    <p style="font-size:9px;color:#94a3b8;">Total: ${reportStats.totalServices} cultes · Moyenne: ${reportStats.avgAttendance} participants/culte</p>
+    <div class="footer">
+      ${settings?.appName || 'ELIKIA EKLESIA'} · Document officiel généré numériquement<br>
+      ${new Date().toLocaleDateString('fr-FR')}
+    </div>
+    </body></html>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (w) { w.focus(); }
+  };
+
   const openPrintPreview = () => {
     const w = window.open('', '_blank');
     if (!w) return;
@@ -545,8 +613,19 @@ export default function ReportsModule({ transactions, events, members, settings 
             <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Exporter en PDF</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">PDF Synthèse</span>
             <span className="text-[10px] text-slate-400 dark:text-slate-500">Rapport {selectedYear}</span>
+          </div>
+        </button>
+
+        <button onClick={exportFullPDF}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm transition-all cursor-pointer text-left min-h-[56px]">
+          <div className="w-9 h-9 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+            <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">PDF Complet</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Membres + finances + cultes</span>
           </div>
         </button>
 

@@ -526,6 +526,44 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
         </div>
       )}
 
+      {/* WhatsApp Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <Send className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Envoyés</span>
+          </div>
+          <span className="text-lg font-bold text-slate-800">{comms.length}</span>
+          <span className="text-[10px] text-slate-400 ml-1">campagnes</span>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Réussite</span>
+          </div>
+          <span className="text-lg font-bold text-emerald-700">
+            {comms.length > 0 ? Math.round((comms.filter(c => c.status === 'Envoyé').length / comms.length) * 100) : 0}%
+          </span>
+          <span className="text-[10px] text-slate-400 ml-1">taux</span>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Échecs</span>
+          </div>
+          <span className="text-lg font-bold text-red-600">{comms.filter(c => c.status === 'Échec').length}</span>
+          <span className="text-[10px] text-slate-400 ml-1">campagnes</span>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Touchés</span>
+          </div>
+          <span className="text-lg font-bold text-slate-800">{comms.reduce((s, c) => s + (c.recipientCount || 0), 0)}</span>
+          <span className="text-[10px] text-slate-400 ml-1">personnes</span>
+        </div>
+      </div>
+
       <div className="flex gap-4 border-b border-slate-200 text-sm font-medium">
         <button onClick={() => setActiveTab('send')}
           className={`pb-2 px-1 cursor-pointer ${activeTab === 'send' ? 'border-b-2 border-indigo-600 text-indigo-600 font-semibold' : 'text-slate-400 hover:text-slate-600'}`}>

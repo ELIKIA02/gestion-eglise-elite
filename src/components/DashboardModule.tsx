@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { Member, FinanceTransaction, ChurchEvent, CommunicationLog } from '../types';
 import type { ChurchSettings } from '../types';
-import { Users, DollarSign, Calendar, Sparkles, Send, AlertTriangle, ShieldCheck, HeartCrack, ChevronRight } from 'lucide-react';
+import { Users, DollarSign, Calendar, Sparkles, Send, AlertTriangle, ShieldCheck, HeartCrack, ChevronRight, Church, Sun, BookOpen, MessageSquare, BarChart3, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface DashboardModuleProps {
@@ -185,21 +185,71 @@ export default function DashboardModule({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Upper header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-slate-100 p-6 rounded-xl gap-4 shadow-md border border-slate-800">
-        <div className="space-y-1">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-300">{settings?.appName || "Tableau de Bord"}</span>
+      {/* Page d'accueil personnalisée */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-800 text-white p-6 md:p-8 rounded-xl shadow-md border border-slate-700">
+        <div className="flex flex-col md:flex-row items-center gap-5">
+          <div className="flex-shrink-0">
+            {settings?.appLogo?.startsWith('data:image') ? (
+              <img src={settings.appLogo} alt="Logo" className="w-20 h-20 md:w-24 md:h-24 object-contain rounded-2xl bg-white/10 p-2 border border-white/20" />
+            ) : (
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-4xl">
+                {settings?.appLogo || '⛪'}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+              {settings?.appName || 'ELIKIA EKLESIA'}
+            </h1>
+            <p className="text-indigo-200/80 text-xs md:text-sm mt-1 leading-relaxed max-w-xl">
+              {settings?.reportHeader?.split('\n')[0] || 'Bienvenue dans votre système de gestion paroissiale'}
+            </p>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
+              <span className="flex items-center gap-1 text-[10px] bg-white/10 px-3 py-1 rounded-full text-indigo-200">
+                <Users className="w-3 h-3" /> {members.length} membres
+              </span>
+              <span className="flex items-center gap-1 text-[10px] bg-white/10 px-3 py-1 rounded-full text-emerald-200">
+                <DollarSign className="w-3 h-3" /> {Math.round(financials.balance).toLocaleString('fr-FR')} FCFA
+              </span>
+              <span className="flex items-center gap-1 text-[10px] bg-white/10 px-3 py-1 rounded-full text-amber-200">
+                <Calendar className="w-3 h-3" /> {events.length} cultes
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {members.length === 0 && (
+              <button onClick={handleSeedDemodatabase} disabled={seeding}
+                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-lg text-xs cursor-pointer shadow-md border border-indigo-400 transition-all">
+                <Sparkles className="w-3.5 h-3.5" />
+                {seeding ? "Création..." : "Alimenter la démo"}
+              </button>
+            )}
+          </div>
         </div>
-        {members.length === 0 && (
-          <button
-            onClick={handleSeedDemodatabase}
-            disabled={seeding}
-            className="flex items-center gap-1.5 bg-indigo-650 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-with-duration cursor-pointer shadow-md shrink-0 border border-indigo-500"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
-            {seeding ? "Création des données..." : "Alimenter la démo (Simulation)"}
-          </button>
-        )}
+      </div>
+
+      {/* Actions rapides */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button onClick={() => onNavigate('members')}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-500 transition-all shadow-xs cursor-pointer">
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center"><Users className="w-4 h-4 text-indigo-600" /></div>
+          <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Membres</div><div className="text-[10px] text-slate-400">Gérer les fidèles</div></div>
+        </button>
+        <button onClick={() => onNavigate('finances')}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-emerald-300 dark:hover:border-emerald-500 transition-all shadow-xs cursor-pointer">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center"><DollarSign className="w-4 h-4 text-emerald-600" /></div>
+          <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Finances</div><div className="text-[10px] text-slate-400">Dîmes & offrandes</div></div>
+        </button>
+        <button onClick={() => onNavigate('cultes')}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-500 transition-all shadow-xs cursor-pointer">
+          <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center"><Calendar className="w-4 h-4 text-amber-600" /></div>
+          <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Cultes</div><div className="text-[10px] text-slate-400">Programmer</div></div>
+        </button>
+        <button onClick={() => onNavigate('documents')}
+          className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-500 transition-all shadow-xs cursor-pointer">
+          <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"><FileText className="w-4 h-4 text-purple-600" /></div>
+          <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Documents</div><div className="text-[10px] text-slate-400">Certificats & reçus</div></div>
+        </button>
       </div>
 
       {/* KPI statistics cards */}
