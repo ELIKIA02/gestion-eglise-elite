@@ -237,7 +237,7 @@ ${content}
       <div style="flex:1"><label>Lieu de Naissance</label><input type="text" id="birthPlace" placeholder="Ville, Pays"></div>
     </div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Nationalité</label><input type="text" id="nationality" placeholder="RDC"></div>
+      <div style="flex:1"><label>Nationalité</label><input type="text" id="nationality" placeholder="Congolaise"></div>
       <div style="flex:1">
         <label>Sexe</label>
         <div class="radio-group">

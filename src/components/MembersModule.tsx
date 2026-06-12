@@ -367,7 +367,7 @@ export default function MembersModule({ members, departments, loading, onRefresh
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Lieu de Naissance</label>
               <input type="text" value={formData.birthPlace} onChange={(e) => setFormData({...formData, birthPlace: e.target.value})}
-                placeholder="Ex: Kinshasa"
+                placeholder="Ex: Brazzaville"
                 className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
           </div>
@@ -411,13 +411,13 @@ export default function MembersModule({ members, departments, loading, onRefresh
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Téléphone / WhatsApp</label>
               <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="Ex: +243 81 234 5678"
+                placeholder="Ex: +242 06 123 4567"
                 className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Adresse</label>
               <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="Ex: 12 Rue de l'Église, Kinshasa"
+                placeholder="Ex: 12 Rue de l'Église, Brazzaville"
                 className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
           </div>
