@@ -327,88 +327,85 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
               </div>
             );
           case 'hebdomadaire':
-            const th = { background: T.accent, color: '#fff', padding: '7px 10px', fontWeight: 'bold', fontSize: '7.5pt', textAlign: 'center' as const };
-            const td = { padding: '5px 10px', borderBottom: `1px dashed ${T.border}` as const, minHeight: '26px' };
+            const cell = { border: `1px solid ${T.border}` as const, padding: '5px 8px', minHeight: '24px', verticalAlign: 'top' as const };
+            const cellH = { ...cell, background: T.accent, color: '#fff', fontWeight: 'bold', fontSize: '7.5pt', textAlign: 'center' as const, padding: '6px 8px' };
             return (
               <div>
                 <div style={{ fontSize: '12pt', fontWeight: 'bold', color: T.accent, textAlign: 'center', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '3px' }}>Suivi Hebdomadaire</div>
                 <div style={{ fontSize: '8pt', color: '#64748b', textAlign: 'center', marginBottom: '4px' }}>Participants • Offrandes • Dépenses</div>
                 <div style={{ textAlign: 'center', fontSize: '7.5pt', color: '#94a3b8', marginBottom: '16px', fontFamily: "'Courier New', monospace" }}>Réf: {ref}</div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '8pt' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: '8pt' }}>
                   <tbody>
                     <tr>
-                      <td style={{ padding: '2px 4px', width: '33%' }}><span style={{ color: '#64748b', fontWeight: 'bold' }}>Semaine du</span><div style={{ borderBottom: `1px solid ${T.border}`, marginTop: '4px', height: '20px' }}></div></td>
-                      <td style={{ padding: '2px 4px', width: '33%' }}><span style={{ color: '#64748b', fontWeight: 'bold' }}>au</span><div style={{ borderBottom: `1px solid ${T.border}`, marginTop: '4px', height: '20px' }}></div></td>
-                      <td style={{ padding: '2px 4px', width: '33%' }}><span style={{ color: '#64748b', fontWeight: 'bold' }}>Mois</span><div style={{ borderBottom: `1px solid ${T.border}`, marginTop: '4px', height: '20px' }}></div></td>
+                      <td style={{ ...cell, width: '33%', borderBottom: 'none' }}><span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt' }}>Semaine du</span><div style={{ minHeight: '20px' }}></div></td>
+                      <td style={{ ...cell, width: '33%', borderBottom: 'none', borderLeft: 'none' }}><span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt' }}>au</span><div style={{ minHeight: '20px' }}></div></td>
+                      <td style={{ ...cell, width: '33%', borderBottom: 'none', borderLeft: 'none' }}><span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt' }}>Mois</span><div style={{ minHeight: '20px' }}></div></td>
                     </tr>
                   </tbody>
                 </table>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '18px', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '18px' }}>
                   <thead>
-                    <tr style={{ background: T.accent, color: '#fff' }}>
-                      <th style={{ ...th, width: '28px' }}>N°</th>
-                      <th style={{ ...th, textAlign: 'left' }}>Jour</th>
-                      <th style={{ ...th, width: '58px' }}>Participants</th>
-                      <th style={{ ...th }}>Dîme</th>
-                      <th style={{ ...th }}>Offrande</th>
-                      <th style={{ ...th }}>Act. de Grâce</th>
-                      <th style={{ ...th }}>Total Entrées</th>
+                    <tr>
+                      <th style={{ ...cellH, width: '26px' }}>N°</th>
+                      <th style={{ ...cellH, borderLeft: 'none', textAlign: 'left' }}>Jour</th>
+                      <th style={{ ...cellH, borderLeft: 'none', width: '58px' }}>Participants</th>
+                      <th style={{ ...cellH, borderLeft: 'none' }}>Dîme</th>
+                      <th style={{ ...cellH, borderLeft: 'none' }}>Offrande</th>
+                      <th style={{ ...cellH, borderLeft: 'none' }}>Act. de Grâce</th>
+                      <th style={{ ...cellH, borderLeft: 'none' }}>Total Entrées</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[1, 2, 3].map((_, i) => (
                       <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : T.secondary }}>
-                        <td style={{ ...td, textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>{i + 1}</td>
-                        <td style={{ ...td }}>
-                          <span style={{ color: '#cbd5e1', fontSize: '7pt' }}>ex: Dimanche</span>
-                          <div style={{ minHeight: '18px' }}></div>
-                        </td>
-                        <td style={{ ...td, textAlign: 'center' }}><div style={{ minHeight: '18px' }}></div></td>
-                        <td style={{ ...td, textAlign: 'right' }}><div style={{ minHeight: '18px' }}></div></td>
-                        <td style={{ ...td, textAlign: 'right' }}><div style={{ minHeight: '18px' }}></div></td>
-                        <td style={{ ...td, textAlign: 'right' }}><div style={{ minHeight: '18px' }}></div></td>
-                        <td style={{ ...td, textAlign: 'right' }}><div style={{ minHeight: '18px' }}></div></td>
+                        <td style={{ ...cell, textAlign: 'center', fontWeight: 'bold', color: '#94a3b8', borderTop: 'none' }}>{i + 1}</td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none' }}><div style={{ minHeight: '24px' }}></div></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'center' }}><div style={{ minHeight: '24px' }}></div></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}><div style={{ minHeight: '24px' }}></div></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}><div style={{ minHeight: '24px' }}></div></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}><div style={{ minHeight: '24px' }}></div></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}><div style={{ minHeight: '24px' }}></div></td>
                       </tr>
                     ))}
-                    <tr style={{ background: T.secondary, fontWeight: 'bold', borderTop: `2px solid ${T.accent}` }}>
-                      <td style={{ padding: '7px 10px', textAlign: 'center', color: T.accent }}></td>
-                      <td style={{ padding: '7px 10px', color: T.accent }}>TOTAUX SEMAINE</td>
-                      <td style={{ padding: '7px 10px', textAlign: 'center' }}></td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right' }}></td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right' }}></td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right' }}></td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right' }}></td>
+                    <tr style={{ background: T.secondary, fontWeight: 'bold' }}>
+                      <td style={{ ...cell, borderTop: 'none', textAlign: 'center', color: T.accent }}></td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', color: T.accent }}>TOTAUX SEMAINE</td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'center' }}></td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}></td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}></td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}></td>
+                      <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}></td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div style={{ marginTop: '20px' }}>
+                <div style={{ marginTop: '6px' }}>
                   <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Dépenses de la semaine</div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${T.border}` }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
                     <thead>
-                      <tr style={{ background: T.accent, color: '#fff' }}>
-                        <th style={{ ...th, width: '28px' }}>N°</th>
-                        <th style={{ ...th, textAlign: 'left' }}>Date</th>
-                        <th style={{ ...th, textAlign: 'left' }}>Libellé</th>
-                        <th style={{ ...th, width: '100px' }}>Montant</th>
+                      <tr>
+                        <th style={{ ...cellH, width: '26px' }}>N°</th>
+                        <th style={{ ...cellH, borderLeft: 'none', textAlign: 'left' }}>Date</th>
+                        <th style={{ ...cellH, borderLeft: 'none', textAlign: 'left' }}>Libellé</th>
+                        <th style={{ ...cellH, borderLeft: 'none', width: '100px' }}>Montant</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[1, 2, 3, 4, 5].map((_, i) => (
                         <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : T.secondary }}>
-                          <td style={{ ...td, textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>{i + 1}</td>
-                          <td style={{ ...td }}><div style={{ minHeight: '18px' }}></div></td>
-                          <td style={{ ...td }}><div style={{ minHeight: '18px' }}></div></td>
-                          <td style={{ ...td, textAlign: 'right' }}><div style={{ minHeight: '18px' }}></div></td>
+                          <td style={{ ...cell, textAlign: 'center', fontWeight: 'bold', color: '#94a3b8', borderTop: 'none' }}>{i + 1}</td>
+                          <td style={{ ...cell, borderTop: 'none', borderLeft: 'none' }}><div style={{ minHeight: '20px' }}></div></td>
+                          <td style={{ ...cell, borderTop: 'none', borderLeft: 'none' }}><div style={{ minHeight: '20px' }}></div></td>
+                          <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}><div style={{ minHeight: '20px' }}></div></td>
                         </tr>
                       ))}
-                      <tr style={{ background: T.secondary, fontWeight: 'bold', borderTop: `2px solid ${T.accent}` }}>
-                        <td style={{ padding: '7px 10px' }}></td>
-                        <td style={{ padding: '7px 10px' }}></td>
-                        <td style={{ padding: '7px 10px', textAlign: 'right', color: T.accent }}>TOTAL DÉPENSES</td>
-                        <td style={{ padding: '7px 10px', textAlign: 'right' }}></td>
+                      <tr style={{ background: T.secondary, fontWeight: 'bold' }}>
+                        <td style={{ ...cell, borderTop: 'none', textAlign: 'center' }}></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none' }}></td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right', color: T.accent }}>TOTAL DÉPENSES</td>
+                        <td style={{ ...cell, borderTop: 'none', borderLeft: 'none', textAlign: 'right' }}></td>
                       </tr>
                     </tbody>
                   </table>
@@ -416,7 +413,7 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
 
                 <div style={{ marginTop: '16px' }}>
                   <span style={{ fontSize: '9pt', color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>Observations / Notes</span>
-                  <div style={{ border: `1px dashed ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '50px' }}></div>
+                  <div style={{ border: `1px solid ${T.border}`, borderRadius: '6px', padding: '8px', minHeight: '50px' }}></div>
                 </div>
               </div>
             );
