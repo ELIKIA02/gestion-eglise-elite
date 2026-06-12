@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, BellRing, Gift, Calendar, DollarSign, Users, CheckCheck } from 'lucide-react';
+import { Bell, BellRing, Gift, Calendar, DollarSign, Users, CheckCheck, X } from 'lucide-react';
 import { AppNotification } from '../types';
 
 interface NotificationBellProps {
@@ -27,8 +27,15 @@ const typeColors: Record<string, string> = {
 
 export default function NotificationBell({ notifications, onMarkRead, onMarkAllRead, theme }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const ref = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -59,63 +66,90 @@ export default function NotificationBell({ notifications, onMarkRead, onMarkAllR
         )}
       </button>
 
-      {isOpen && (
-        <div className={`absolute right-0 mt-2 w-80 rounded-xl shadow-xl border z-50 ${
+      {isOpen && !isMobile && (
+        <div className={`absolute right-0 mt-2 w-96 max-w-[90vw] rounded-xl shadow-xl border z-[100] ${
           theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
         }`}>
           <div className={`flex items-center justify-between px-4 py-3 border-b ${
             theme === 'dark' ? 'border-slate-700' : 'border-slate-200'
           }`}>
             <span className={`text-xs font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
-              Notifications
+              Notifications {unreadCount > 0 && `(${unreadCount})`}
             </span>
             {unreadCount > 0 && (
-              <button
-                onClick={onMarkAllRead}
-                className="flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer"
-              >
-                <CheckCheck className="w-3 h-3" />
-                Tout lu
+              <button onClick={onMarkAllRead}
+                className="flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">
+                <CheckCheck className="w-3 h-3" /> Tout lu
               </button>
             )}
           </div>
-
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className={`text-center py-8 text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-                Aucune notification
-              </div>
+              <div className={`text-center py-8 text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Aucune notification</div>
             ) : (
               notifications.map(n => (
-                <button
-                  key={n.id}
-                  onClick={() => { onMarkRead(n.id); }}
+                <button key={n.id} onClick={() => { onMarkRead(n.id); }}
                   className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors cursor-pointer border-b ${
                     theme === 'dark' ? 'border-slate-700/50 hover:bg-slate-700/50' : 'border-slate-100 hover:bg-slate-50'
-                  } ${!n.read ? (theme === 'dark' ? 'bg-slate-700/30' : 'bg-indigo-50/40') : ''}`}
-                >
-                  <span className={`mt-0.5 ${typeColors[n.type] || typeColors.system}`}>
-                    {typeIconMap[n.type] || typeIconMap.system}
-                  </span>
+                  } ${!n.read ? (theme === 'dark' ? 'bg-slate-700/30' : 'bg-indigo-50/40') : ''}`}>
+                  <span className={`mt-0.5 ${typeColors[n.type] || typeColors.system}`}>{typeIconMap[n.type] || typeIconMap.system}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[11px] leading-tight ${!n.read ? 'font-bold' : ''} ${
-                      theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
-                    }`}>
-                      {n.title}
-                    </p>
-                    <p className={`text-[10px] mt-0.5 ${
-                      theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
-                    }`}>
-                      {n.message}
-                    </p>
+                    <p className={`text-[11px] leading-tight ${!n.read ? 'font-bold' : ''} ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{n.title}</p>
+                    <p className={`text-[10px] mt-0.5 break-words ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{n.message}</p>
                     <p className="text-[9px] mt-1 text-slate-400">{n.date}</p>
                   </div>
-                  {!n.read && (
-                    <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                  )}
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
                 </button>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {isOpen && isMobile && (
+        <div className="fixed inset-0 z-[200] flex flex-col">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsOpen(false)} />
+          <div className={`relative mt-auto max-h-[80vh] rounded-t-2xl shadow-2xl overflow-hidden ${
+            theme === 'dark' ? 'bg-slate-800' : 'bg-white'
+          }`}>
+            <div className={`flex items-center justify-between px-4 py-3 border-b sticky top-0 z-10 ${
+              theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+            }`}>
+              <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                Notifications {unreadCount > 0 && `(${unreadCount})`}
+              </span>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button onClick={onMarkAllRead}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-indigo-500 hover:text-indigo-400 cursor-pointer">
+                    <CheckCheck className="w-3 h-3" /> Tout lu
+                  </button>
+                )}
+                <button onClick={() => setIsOpen(false)} className="p-1 rounded-lg hover:bg-slate-700/50 cursor-pointer">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(80vh-56px)]">
+              {notifications.length === 0 ? (
+                <div className={`text-center py-8 text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Aucune notification</div>
+              ) : (
+                notifications.map(n => (
+                  <button key={n.id} onClick={() => { onMarkRead(n.id); }}
+                    className={`w-full text-left px-4 py-4 flex items-start gap-3 transition-colors cursor-pointer border-b ${
+                      theme === 'dark' ? 'border-slate-700/50 hover:bg-slate-700/50' : 'border-slate-100 hover:bg-slate-50'
+                    } ${!n.read ? (theme === 'dark' ? 'bg-slate-700/30' : 'bg-indigo-50/40') : ''}`}>
+                    <span className={`mt-0.5 shrink-0 ${typeColors[n.type] || typeColors.system}`}>{typeIconMap[n.type] || typeIconMap.system}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-tight ${!n.read ? 'font-bold' : ''} ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{n.title}</p>
+                      <p className={`text-xs mt-1 break-words leading-relaxed ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>{n.message}</p>
+                      <p className="text-[10px] mt-1.5 text-slate-400">{n.date}</p>
+                    </div>
+                    {!n.read && <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
