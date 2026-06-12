@@ -17,10 +17,11 @@ import EnseignementModule from './components/EnseignementModule';
 import DocumentsModule from './components/DocumentsModule';
 import UsersModule from './components/UsersModule';
 import LiturgicalThemesModule from './components/LiturgicalThemesModule';
+import PresenceModule from './components/PresenceModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark, UserCheck } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -263,6 +264,7 @@ export default function App() {
     { id: 'departments', label: 'Départements', icon: Building2, count: departments.length },
     { id: 'finances', label: 'Trésorerie', icon: CreditCard },
     { id: 'cultes', label: 'Cultes & Activités', icon: CalendarDays },
+    { id: 'presence', label: 'Présence', icon: UserCheck },
     { id: 'comms', label: 'Communications', icon: MessageSquareText },
     { id: 'ia', label: 'Assistant IA', icon: Sparkles },
     { id: 'enseignement', label: 'Enseignement', icon: BookOpen },
@@ -397,6 +399,9 @@ export default function App() {
           )}
           {activeTab === 'cultes' && (
             <EventsModule events={events} loading={loadingEvents} onRefresh={() => {}} settings={settings} />
+          )}
+          {activeTab === 'presence' && (
+            <PresenceModule />
           )}
           {activeTab === 'comms' && (
             <CommunicationsModule comms={comms} members={members} departments={departments}
