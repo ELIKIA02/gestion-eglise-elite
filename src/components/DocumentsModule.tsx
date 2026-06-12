@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, Printer, Download, X, Plus, Trash2, MoveUp, MoveDown, Palette } from 'lucide-react';
+import { FileText, Printer, Download, FileDown, X, Plus, Trash2, MoveUp, MoveDown, Palette } from 'lucide-react';
 import { ChurchSettings, Member } from '../types';
 
 type DocType = 'certificat' | 'recu' | 'attestation' | 'devis' | 'fiche';
@@ -103,6 +103,24 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
     const url = URL.createObjectURL(blob);
     const w = window.open(url, '_blank');
     if (w) w.focus();
+  };
+
+  const downloadWord = () => {
+    if (!printRef.current) return;
+    const content = printRef.current.innerHTML;
+    const html = `<!DOCTYPE html><html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset="utf-8"><style>
+      body { margin: 0; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table { border-collapse: collapse; }
+    </style></head><body>${content}</body></html>`;
+    const blob = new Blob([html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.label}-${ref}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => { setFields({}); setRef(generateRef()); setLignes([{ id: genId(), description: '', quantite: 1, prixUnitaire: 0 }]); setPreview(false); setFicheType('membre'); }, [docType]);
@@ -751,6 +769,10 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
               <button onClick={() => setPreview(false)}
                 className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 px-3 py-1.5 border border-slate-200 rounded-lg cursor-pointer">
                 <X className="w-3.5 h-3.5" /> Modifier
+              </button>
+              <button onClick={downloadWord}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all">
+                <FileDown className="w-3.5 h-3.5" /> Word
               </button>
               <button onClick={downloadPDF}
                 className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all">
