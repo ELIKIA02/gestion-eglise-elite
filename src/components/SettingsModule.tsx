@@ -657,16 +657,39 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                   try {
-                    const data = JSON.parse(ev.target?.result as string);
-                    if (typeof data !== 'object') throw new Error('Format invalide');
-                    // Compatibilité : ancien format (direct) ou nouveau (emballé)
-                    if (data.church_db_data || data.church_enseignements) {
-                      if (data.church_db_data) localStorage.setItem('church_db_data', JSON.stringify(data.church_db_data));
-                      if (data.church_enseignements) localStorage.setItem('church_enseignements', JSON.stringify(data.church_enseignements));
-                    } else {
-                      localStorage.setItem('church_db_data', JSON.stringify(data));
+                    const imported = JSON.parse(ev.target?.result as string);
+                    if (typeof imported !== 'object') throw new Error('Format invalide');
+                    const impData = imported.church_db_data || imported;
+                    const impEns = imported.church_enseignements;
+
+                    // Merge church_db_data
+                    const existingRaw = localStorage.getItem('church_db_data');
+                    const existing = existingRaw ? JSON.parse(existingRaw) : {};
+                    const merged: any = {};
+                    const allKeys = new Set([...Object.keys(existing), ...Object.keys(impData)]);
+                    for (const key of allKeys) {
+                      const oldVal = existing[key];
+                      const newVal = impData[key];
+                      if (!oldVal) { merged[key] = newVal; continue; }
+                      if (!newVal) { merged[key] = oldVal; continue; }
+                      if (Array.isArray(oldVal) && Array.isArray(newVal)) {
+                        const oldIds = new Set(oldVal.map((i: any) => i.id));
+                        merged[key] = [...oldVal, ...newVal.filter((i: any) => i && i.id && !oldIds.has(i.id))];
+                      } else {
+                        merged[key] = oldVal;
+                      }
                     }
-                    alert('Données importées avec succès ! La page va se recharger.');
+                    localStorage.setItem('church_db_data', JSON.stringify(merged));
+
+                    // Merge enseignements
+                    if (impEns) {
+                      const oldEnsRaw = localStorage.getItem('church_enseignements');
+                      const oldEns = oldEnsRaw ? JSON.parse(oldEnsRaw) : [];
+                      const oldIds = new Set(oldEns.map((i: any) => i.id));
+                      const mergedEns = [...oldEns, ...impEns.filter((i: any) => i && i.id && !oldIds.has(i.id))];
+                      localStorage.setItem('church_enseignements', JSON.stringify(mergedEns));
+                    }
+                    alert(`Données fusionnées avec succès ! (${merged.church_members?.length || 0} membres, ${merged.church_finances?.length || 0} transactions, etc.)`);
                     window.location.reload();
                   } catch {
                     alert('Fichier invalide. Veuillez sélectionner un fichier JSON exporté depuis cette application.');
