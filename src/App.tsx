@@ -414,7 +414,7 @@ export default function App() {
             <EnseignementModule settings={settings} members={members} departments={departments} />
           )}
           {activeTab === 'liturgical' && (
-            <LiturgicalThemesModule settings={settings} members={members} />
+            <LiturgicalThemesModule settings={settings} members={members} onNavigate={handleNavigate} />
           )}
           {activeTab === 'documents' && (
             <DocumentsModule settings={settings} members={members} />

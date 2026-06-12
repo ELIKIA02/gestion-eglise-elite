@@ -29,9 +29,10 @@ const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
 interface LiturgicalThemesModuleProps {
   settings: ChurchSettings | null;
   members: Member[];
+  onNavigate?: (tab: string, text?: string) => void;
 }
 
-export default function LiturgicalThemesModule({ settings, members }: LiturgicalThemesModuleProps) {
+export default function LiturgicalThemesModule({ settings, members, onNavigate }: LiturgicalThemesModuleProps) {
   const [themes, setThemes] = useState<LiturgicalTheme[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -50,7 +51,6 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
   const [formHymns, setFormHymns] = useState('');
   const [formThemeType, setFormThemeType] = useState('');
   const [formScheduled, setFormScheduled] = useState(false);
-  const [sending, setSending] = useState<string | null>(null);
 
   const seasonsList = useMemo(() => {
     const raw = settings?.liturgicalSeasons || "Avent, Carême, Pâques, Pentecôte, Ordinaire, Noël";
@@ -160,21 +160,9 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
     try { await deleteDoc(doc(db, COLLECTION, id)); } catch (err) { handleFirestoreError(err, OperationType.DELETE, `${COLLECTION}/${id}`); }
   };
 
-  const handleScheduleSend = async (theme: LiturgicalTheme) => {
-    if (!window.confirm(`Programmer l'envoi du thème "${theme.title}" par WhatsApp ?`)) return;
-    setSending(theme.id || null);
-    try {
-      const text = `📖 *Thème Liturgique* 📖\n\n*${theme.title}*\n📅 ${new Date(theme.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}\n${theme.preacher ? `👤 Prédicateur : ${theme.preacher}\n` : ''}${theme.bibleText ? `📖 Texte : ${theme.bibleText}\n` : ''}${theme.description ? `\n${theme.description}\n` : ''}${theme.hymns ? `\n🎵 Cantiques : ${theme.hymns}` : ''}`;
-      await addDoc(collection(db, 'church_communications'), {
-        type: 'WhatsApp', title: `Thème: ${theme.title}`,
-        template: text, sentToGroup: 'Tous',
-        sentAt: new Date().toISOString(), recipientCount: members.length,
-        status: 'Envoyé', createdAt: new Date().toISOString()
-      });
-      await updateDoc(doc(db, COLLECTION, theme.id!), { scheduled: false });
-      alert('✅ Thème envoyé par WhatsApp avec succès !');
-    } catch (err) { alert('Erreur lors de l\'envoi.'); }
-    finally { setSending(null); }
+  const handleScheduleSend = (theme: LiturgicalTheme) => {
+    const text = `📖 *Thème Liturgique* 📖\n\n*${theme.title}*\n📅 ${new Date(theme.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}\n${theme.preacher ? `👤 Prédicateur : ${theme.preacher}\n` : ''}${theme.bibleText ? `📖 Texte : ${theme.bibleText}\n` : ''}${theme.description ? `\n${theme.description}\n` : ''}${theme.hymns ? `\n🎵 Cantiques : ${theme.hymns}` : ''}`;
+    if (onNavigate) onNavigate('comms', text);
   };
 
   const isToday = (dateStr: string) => {
@@ -283,11 +271,10 @@ export default function LiturgicalThemesModule({ settings, members }: Liturgical
                     {theme.hymns && <p className="text-[10px] text-slate-400 mt-0.5">Cantiques : {theme.hymns}</p>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => handleScheduleSend(theme)} disabled={sending === theme.id}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-50 text-emerald-700 text-[10px] font-semibold cursor-pointer disabled:opacity-50 transition-all"
-                      title="Programmer l'envoi WhatsApp">
-                      {sending === theme.id ? <Clock className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                      Envoyer
+                    <button onClick={() => handleScheduleSend(theme)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-50 text-emerald-700 text-[10px] font-semibold cursor-pointer transition-all"
+                      title="Préparer l'envoi WhatsApp">
+                      <Send className="w-3 h-3" /> Envoyer
                     </button>
                     <button onClick={() => openEdit(theme)} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Modifier"><Edit2 className="w-3.5 h-3.5 text-slate-500" /></button>
                     <button onClick={() => handleDelete(theme.id!)} className="p-1.5 rounded-lg border border-red-200 hover:bg-red-50 cursor-pointer" title="Supprimer"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
