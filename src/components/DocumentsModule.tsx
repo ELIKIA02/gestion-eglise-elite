@@ -474,74 +474,94 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
                 </div>
               </div>
             );
-          case 'renseignement':
-            const box = (label: string, span = 1) => (
-              <td style={{ border: `1px solid ${T.border}`, padding: '5px 8px', minHeight: '28px', verticalAlign: 'top', width: span > 1 ? `${(span / 6) * 100}%` : undefined }}>
-                <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-                <div style={{ minHeight: '22px' }}></div>
-              </td>
+          case 'renseignement': {
+            const _chk = (label: string) => (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginRight: '10px', fontSize: '7.5pt', whiteSpace: 'nowrap' }}>
+                <span style={{ width: '12px', height: '12px', border: `1.5px solid ${T.color}`, borderRadius: '2px', display: 'inline-block' }}></span>
+                {label}
+              </span>
             );
-            const boxFull = (label: string) => (
-              <td colSpan={6} style={{ border: `1px solid ${T.border}`, padding: '5px 8px', minHeight: '28px', verticalAlign: 'top' }}>
-                <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-                <div style={{ minHeight: '22px' }}></div>
+            const _cell = (label: string) => (
+              <td style={{ border: `1px solid ${T.border}`, padding: '4px 7px', minHeight: '26px', verticalAlign: 'top' }}>
+                <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</span>
+                <div style={{ minHeight: '20px' }}></div>
               </td>
             );
             return (
               <div>
-                <div style={{ fontSize: '12pt', fontWeight: 'bold', color: T.accent, textAlign: 'center', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '3px' }}>Fiche de Renseignement</div>
-                <div style={{ fontSize: '8pt', color: '#64748b', textAlign: 'center', marginBottom: '4px' }}>Nouveau Membre</div>
-                <div style={{ textAlign: 'center', fontSize: '7.5pt', color: '#94a3b8', marginBottom: '16px', fontFamily: "'Courier New', monospace" }}>N° {ref}</div>
+                <div style={{ fontSize: '13pt', fontWeight: 'bold', color: T.accent, textAlign: 'center', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '4px' }}>Fiche de Renseignement</div>
+                <div style={{ fontSize: '8pt', color: '#64748b', textAlign: 'center', marginBottom: '2px', fontStyle: 'italic' }}>Nouveau Membre — À remplir par l'accueil</div>
+                <div style={{ textAlign: 'center', fontSize: '7pt', color: '#94a3b8', marginBottom: '14px', fontFamily: "'Courier New', monospace" }}>N° {ref}</div>
 
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>État Civil</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
-                  <tbody>
-                    <tr>{box('Nom & Prénoms', 6)}</tr>
-                    <tr>{box('Date de naissance', 2)}{box('Lieu de naissance', 2)}{box('Sexe', 1)}{box('Nationalité', 1)}</tr>
-                    <tr>{box('Situation matrimoniale', 3)}{box('Profession', 3)}</tr>
-                  </tbody>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '12px' }}>
+                  <tr><td colSpan={4} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>État Civil</td></tr>
+                  <tr>{_cell('Nom & Prénoms')}{_cell('Date de naissance')}{_cell('Lieu de naissance')}{_cell('Nationalité')}</tr>
+                  <tr>
+                    <td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '3px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Sexe</span>
+                      {_chk('Masculin')}{_chk('Féminin')}
+                    </td>
+                    <td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '3px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Situation Matrimoniale</span>
+                      {_chk('Célibataire')}{_chk('Marié(e)')}{_chk('Divorcé(e)')}{_chk('Veuf(ve)')}
+                    </td>
+                  </tr>
+                  <tr>{_cell('Profession')}{_cell('Téléphone')}{_cell('Email')}{_cell('Adresse')}</tr>
                 </table>
 
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Contact</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
-                  <tbody>
-                    <tr>{box('Adresse complète', 6)}</tr>
-                    <tr>{box('Téléphone', 3)}{box('Email', 3)}</tr>
-                  </tbody>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '12px' }}>
+                  <tr><td colSpan={3} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>Vie Spirituelle</td></tr>
+                  <tr>{_cell('Date de conversion')}{_cell('Ancienne église')}{_cell("Date d'arrivée dans l'église")}</tr>
+                  <tr>
+                    <td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '3px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Baptême</span>
+                      {_chk('Oui')}{_chk('Non')}
+                    </td>
+                    <td style={{ border: `1px solid ${T.border}`, padding: '4px 7px', verticalAlign: 'top' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Date de baptême</span>
+                      <div style={{ minHeight: '20px' }}></div>
+                    </td>
+                  </tr>
                 </table>
 
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Vie Spirituelle</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
-                  <tbody>
-                    <tr>{box('Date de conversion', 2)}{box('Baptême (Oui/Non)', 2)}{box("Date de baptême", 2)}</tr>
-                    <tr>{box('Ancienne église', 3)}{box("Date d'arrivée", 3)}</tr>
-                  </tbody>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '12px' }}>
+                  <tr><td colSpan={4} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>Engagement & Ministère</td></tr>
+                  <tr>
+                    <td colSpan={4} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '3px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Ministère souhaité</span>
+                      {_chk('Musique')}{_chk('Enseignement')}{_chk('Accueil')}{_chk('Média')}{_chk('Jeunesse')}{_chk('Prière')}{_chk('Usher')}{_chk('Autre')}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Dons / Talents</span>
+                      <div style={{ minHeight: '20px' }}></div>
+                    </td>
+                    <td colSpan={2} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Motivation</span>
+                      <div style={{ minHeight: '40px' }}></div>
+                    </td>
+                  </tr>
                 </table>
 
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Motivation & Engagement</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
-                  <tbody>
-                    <tr>{box("Ministère souhaité", 3)}{box('Dons / Talents', 3)}</tr>
-                    <tr>{boxFull("Motivation / pourquoi avez-vous choisi cette église")}</tr>
-                  </tbody>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '12px' }}>
+                  <tr><td colSpan={4} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>Famille</td></tr>
+                  <tr>{_cell('Nom du conjoint(e)')}{_cell("Nombre d'enfants")}{_cell('Âges des enfants')}{_cell('Téléphone urgence')}</tr>
+                  <tr>
+                    <td colSpan={4} style={{ border: `1px solid ${T.border}`, padding: '4px 7px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 'bold', display: 'block', marginBottom: '2px', fontSize: '6.5pt', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Personne à contacter en cas d'urgence</span>
+                      <div style={{ minHeight: '20px' }}></div>
+                    </td>
+                  </tr>
                 </table>
 
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Famille & Contact Urgence</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt', marginBottom: '14px' }}>
-                  <tbody>
-                    <tr>{box('Nom du conjoint(e)', 3)}{box("Nombre d'enfants", 1)}{box('Âges', 2)}</tr>
-                    <tr>{box("Personne à contacter (urgence)", 3)}{box('Téléphone urgence', 3)}</tr>
-                  </tbody>
-                </table>
-
-                <div style={{ fontSize: '9pt', fontWeight: 'bold', color: T.accent, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Observations</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
-                  <tbody>
-                    <tr><td colSpan={6} style={{ border: `1px solid ${T.border}`, padding: '8px', minHeight: '60px', verticalAlign: 'top' }}><div style={{ minHeight: '50px' }}></div></td></tr>
-                  </tbody>
+                  <tr><td colSpan={4} style={{ background: T.accent, color: '#fff', padding: '5px 8px', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase', letterSpacing: '1px' }}>Observations</td></tr>
+                  <tr><td colSpan={4} style={{ border: `1px solid ${T.border}`, padding: '8px', minHeight: '50px', verticalAlign: 'top' }}><div style={{ minHeight: '45px' }}></div></td></tr>
                 </table>
               </div>
             );
+          }
         }
       };
 
