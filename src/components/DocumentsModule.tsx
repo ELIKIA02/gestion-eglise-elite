@@ -109,15 +109,44 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   const downloadWord = () => {
     if (!printRef.current) return;
     const content = printRef.current.innerHTML;
-    const html = `<!DOCTYPE html><html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset="utf-8"><style>
-      body { margin: 0; padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      table { border-collapse: collapse; }
-    </style></head><body>${content}</body></html>`;
+    const docName = docType === 'fiche'
+      ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
+      : doc.label;
+    const themeBg = T.bg;
+    const themeAccent = T.accent;
+    const themeBorder = T.border;
+    const themeSecondary = T.secondary;
+    const themeColor = T.color;
+    const html = `<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office'
+      xmlns:w='urn:schemas-microsoft-com:office:word'
+      xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+  body { margin: 40px auto; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: ${themeColor}; background: ${themeBg}; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border: 1px solid ${themeBorder}; mso-border-alt: solid windowtext .5pt; padding: 4px 7px; vertical-align: top; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; mso-background: auto; }
+</style>
+</head>
+<body style="background:${themeBg};color:${themeColor}">
+${content}
+</body></html>`;
     const blob = new Blob([html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${doc.label}-${ref}.doc`;
+    a.download = `${docName}-${ref}.doc`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
