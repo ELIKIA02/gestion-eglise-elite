@@ -227,162 +227,23 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleSendForm = async (phone: string) => {
     if (!phone) { alert('Veuillez sélectionner un membre ou entrer un numéro.'); return; }
-    if (!settings) { alert('Paramètres de l\'église non disponibles.'); return; }
     if (waStatus !== 'connected') { alert('WhatsApp n\'est pas connecté.'); return; }
 
     setSendingForm(true);
     try {
-      const appName = settings.appName || "ELIKIA EKLESIA";
-      const logo = settings.appLogo || '⛪';
-      const serverUrl = window.location.origin;
+      const formUrl = `${window.location.origin}/api/renseignement/form`;
 
-      const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<title>Fiche de Renseignement — ${appName}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;padding:16px;padding-bottom:120px}
-  .container{max-width:560px;margin:0 auto}
-  .header{text-align:center;margin-bottom:20px}
-  .header .logo{font-size:40px}
-  .header h1{font-size:18px;font-weight:800;margin-top:4px}
-  .header p{font-size:12px;color:#64748b;margin-top:2px}
-  .section{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-  .section h2{font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
-  .field{margin-bottom:12px}
-  .field:last-child{margin-bottom:0}
-  .field label{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:3px}
-  .field input,.field select,.field textarea{width:100%;padding:10px 12px;font-size:14px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;outline:none;transition:border-color .2s;-webkit-appearance:none}
-  .field input:focus,.field select:focus,.field textarea:focus{border-color:#4f46e5}
-  .field textarea{resize:vertical;min-height:70px;font-family:inherit}
-  .field .radio-group{display:flex;gap:12px;padding-top:4px}
-  .field .radio-group label{font-size:14px;font-weight:400;display:flex;align-items:center;gap:6px;cursor:pointer}
-  .field .checkbox-group{display:flex;flex-wrap:wrap;gap:8px}
-  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0;display:flex;gap:8px;box-shadow:0 -2px 10px rgba(0,0,0,.05);z-index:100}
-  .actions button{flex:1;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .2s}
-  .actions button:active{opacity:.8}
-  .btn-send{background:#4f46e5;color:#fff}
-  .btn-download{background:#e2e8f0;color:#475569}
-  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:200;display:none;text-align:center;max-width:90%}
-  .toast.error{background:#dc2626}
-  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
-</style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <div class="logo">${logo.startsWith('data:') ? `<img src="${logo}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">` : logo}</div>
-    <h1>${appName}</h1>
-    <p>Fiche de Renseignement — Nouveau Membre</p>
-  </div>
-  <div class="section"><h2>État Civil</h2>
-    <div class="field"><label>Nom & Prénoms *</label><input type="text" id="name" placeholder="Ex: Jean-Baptiste Ngoma" required></div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date de Naissance</label><input type="date" id="birthday"></div>
-      <div style="flex:1"><label>Lieu de Naissance</label><input type="text" id="birthPlace" placeholder="Ville, Pays"></div>
-    </div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Nationalité</label><input type="text" id="nationality" placeholder="Congolaise"></div>
-      <div style="flex:1"><label>Sexe</label>
-        <div class="radio-group"><label><input type="radio" name="gender" value="M"> M</label><label><input type="radio" name="gender" value="F"> F</label></div>
-      </div>
-    </div>
-    <div class="field"><label>Situation Matrimoniale</label>
-      <select id="maritalStatus"><option value="">Sélectionnez...</option><option>Célibataire</option><option>Marié(e)</option><option>Divorcé(e)</option><option>Veuf(ve)</option></select>
-    </div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Profession</label><input type="text" id="profession" placeholder="Métier"></div>
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="phone" placeholder="+242 XX XXX XXXX"></div>
-    </div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Email</label><input type="email" id="email" placeholder="exemple@email.com"></div>
-      <div style="flex:1"><label>Adresse</label><input type="text" id="address" placeholder="Quartier, Ville"></div>
-    </div>
-  </div>
-  <div class="section"><h2>Vie Spirituelle</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date de Conversion</label><input type="date" id="conversionDate"></div>
-      <div style="flex:1"><label>Ancienne Église</label><input type="text" id="formerChurch" placeholder="Nom de l'église"></div>
-    </div>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date d'Arrivée</label><input type="date" id="arrivalDate"></div>
-      <div style="flex:1"><label>Baptisé</label>
-        <select id="baptized"><option value="">Sélectionnez...</option><option>Oui</option><option>Non</option></select>
-      </div>
-    </div>
-    <div class="field"><label>Date de Baptême</label><input type="date" id="baptismDate"></div>
-  </div>
-  <div class="section"><h2>Engagement</h2>
-    <div class="field"><label>Talents / Dons</label><textarea id="talents" placeholder="Chant, enseignement, intercession, etc."></textarea></div>
-    <div class="field"><label>Motivation</label><textarea id="motivation" placeholder="Pourquoi souhaitez-vous vous engager ?"></textarea></div>
-  </div>
-  <div class="section"><h2>Famille</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Conjoint(e)</label><input type="text" id="spouseName" placeholder="Nom complet"></div>
-      <div style="flex:1"><label>Enfants</label><input type="text" id="childrenCount" placeholder="Ex: 3"></div>
-    </div>
-    <div class="field"><label>Âges des Enfants</label><input type="text" id="childrenAges" placeholder="Ex: 5, 8, 12 ans"></div>
-  </div>
-  <div class="section"><h2>Contact d'Urgence</h2>
-    <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Téléphone</label><input type="tel" id="emergencyPhone" placeholder="+242 XX XXX XXXX"></div>
-      <div style="flex:1"><label>Nom</label><input type="text" id="emergencyContact" placeholder="Mère, père, etc."></div>
-    </div>
-  </div>
-  <div style="height:80px"></div>
-</div>
-<div class="actions">
-  <button class="btn-download" onclick="downloadJSON()">📥 Télécharger</button>
-  <button class="btn-send" onclick="submitForm()" id="sendBtn">📤 Envoyer à l'Église</button>
-</div>
-<div id="toast" class="toast"></div>
-<script>
-function g(id){return document.getElementById(id)}
-function val(id){const e=g(id);return e?e.value:''}
-function radioVal(name){const e=document.querySelector('input[name="'+name+'"]:checked');return e?e.value:''}
-function showToast(msg,e){const t=g('toast');t.textContent=msg;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(()=>{t.style.display='none'},4000)}
-function getData(){return{
-  name:val('name'),email:val('email'),phone:val('phone'),
-  birthday:val('birthday'),birthPlace:val('birthPlace'),
-  nationality:val('nationality'),gender:radioVal('gender'),
-  maritalStatus:val('maritalStatus'),profession:val('profession'),
-  address:val('address'),conversionDate:val('conversionDate'),
-  formerChurch:val('formerChurch'),arrivalDate:val('arrivalDate'),
-  baptized:val('baptized'),baptismDate:val('baptismDate'),
-  talents:val('talents'),motivation:val('motivation'),
-  spouseName:val('spouseName'),childrenCount:val('childrenCount'),
-  childrenAges:val('childrenAges'),emergencyPhone:val('emergencyPhone'),
-  emergencyContact:val('emergencyContact')
-}}
-function downloadJSON(){const d=getData();if(!d.name.trim()){showToast('Veuillez remplir le nom',true);return}
-  const b=new Blob([JSON.stringify({data:d},null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  a.download='fiche-renseignement-'+Date.now()+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
-  showToast('✅ Fichier téléchargé !')}
-async function submitForm(){const d=getData();if(!d.name.trim()){showToast('Veuillez remplir le nom',true);return}
-  const btn=g('sendBtn');btn.innerHTML='<span class="spinner"></span> Envoi...';btn.disabled=true;
-  try{const r=await fetch('${serverUrl}/api/renseignement/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:d})});
-    const j=await r.json();if(j.success){showToast('✅ Envoyé avec succès !');downloadJSON()}else{showToast('❌ '+(j.error||'Erreur'),true)}
-  }catch(e){showToast('❌ Problème de connexion',true)}
-  btn.innerHTML='📤 Envoyer à l\'Église';btn.disabled=false}
-<\/script>
-</body>
-</html>`;
-
-      const res = await fetch('/api/renseignement/send-form', {
+      const res = await fetch('/api/whatsapp/send-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, htmlContent: html }),
+        body: JSON.stringify({
+          recipients: [{ phone, name: phone }],
+          text: `📋 *Formulaire de Renseignement — Nouveau Membre*\n\nCliquez sur le lien ci-dessous pour remplir votre fiche d'information :\n\n${formUrl}\n\nAprès avoir rempli, appuyez sur « Envoyer à l'Église » pour nous transmettre vos données directement par WhatsApp.\n\nMerci et que Dieu vous bénisse ! 🙏`
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Formulaire envoyé avec succès à ${phone}`);
+        alert(`✅ Lien envoyé avec succès à ${phone}`);
       } else {
         alert(`❌ ${data.error || 'Erreur lors de l\'envoi'}`);
       }
@@ -1029,11 +890,12 @@ async function submitForm(){const d=getData();if(!d.name.trim()){showToast('Veui
           </div>
           <button onClick={() => handleSendForm(formManualPhone)} disabled={sendingForm || !formManualPhone || waStatus !== 'connected'}
             className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 cursor-pointer transition-all">
-            {sendingForm ? <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours...</> : <><Send className="w-4 h-4" /> Envoyer le formulaire par WhatsApp</>}
+            {sendingForm ? <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours...</> : <><Send className="w-4 h-4" /> Envoyer le lien du formulaire</>}
           </button>
           {waStatus !== 'connected' && (
-            <p className="text-[10px] text-amber-600 text-center">WhatsApp doit être connecté pour envoyer le formulaire.</p>
+            <p className="text-[10px] text-amber-600 text-center">WhatsApp doit être connecté pour envoyer le lien.</p>
           )}
+          <p className="text-[10px] text-slate-400 text-center">Le destinataire reçoit un lien cliquable. Il remplit en ligne et les données arrivent directement sur le WhatsApp de l'église.</p>
         </div>
       </div>
 
