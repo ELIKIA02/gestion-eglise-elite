@@ -96,14 +96,30 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   const downloadPDF = () => {
     if (!printRef.current) return;
     const content = printRef.current.innerHTML;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      body { margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      @media print { body { margin: 0; padding: 20px; } }
-    </style></head><body>${content}</body></html>`;
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank');
-    if (w) w.focus();
+    const docName = docType === 'fiche'
+      ? (FICHE_TYPES.find(f => f.id === ficheType)?.label || 'Fiche')
+      : doc.label;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${docName} - ${ref}</title>
+<style>
+  @page { size: A4; margin: 15mm; }
+  body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table { page-break-inside: avoid; }
+  @media print {
+    body { margin: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>${content}</body>
+</html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 500);
   };
 
   const downloadWord = () => {
