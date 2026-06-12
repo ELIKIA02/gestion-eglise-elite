@@ -10,6 +10,23 @@ export interface Member {
   birthday?: string;
   address?: string;
   group?: string;
+  birthPlace?: string;
+  nationality?: string;
+  gender?: string;
+  maritalStatus?: string;
+  profession?: string;
+  conversionDate?: string;
+  formerChurch?: string;
+  arrivalDate?: string;
+  baptized?: string;
+  baptismDate?: string;
+  talents?: string;
+  motivation?: string;
+  spouseName?: string;
+  childrenCount?: string;
+  childrenAges?: string;
+  emergencyPhone?: string;
+  emergencyContact?: string;
   createdAt: string;
 }
 

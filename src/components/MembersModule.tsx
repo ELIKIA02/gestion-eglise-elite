@@ -61,7 +61,24 @@ export default function MembersModule({ members, departments, loading, onRefresh
     ministry: 'Aucun',
     birthday: '',
     address: '',
-    group: 'Aucun'
+    group: 'Aucun',
+    birthPlace: '',
+    nationality: '',
+    gender: '',
+    maritalStatus: '',
+    profession: '',
+    conversionDate: '',
+    formerChurch: '',
+    arrivalDate: '',
+    baptized: '',
+    baptismDate: '',
+    talents: '',
+    motivation: '',
+    spouseName: '',
+    childrenCount: '',
+    childrenAges: '',
+    emergencyPhone: '',
+    emergencyContact: '',
   });
 
   const [saving, setSaving] = useState(false);
@@ -76,7 +93,24 @@ export default function MembersModule({ members, departments, loading, onRefresh
       ministry: 'Aucun',
       birthday: '',
       address: '',
-      group: 'Aucun'
+      group: 'Aucun',
+      birthPlace: '',
+      nationality: '',
+      gender: '',
+      maritalStatus: '',
+      profession: '',
+      conversionDate: '',
+      formerChurch: '',
+      arrivalDate: '',
+      baptized: '',
+      baptismDate: '',
+      talents: '',
+      motivation: '',
+      spouseName: '',
+      childrenCount: '',
+      childrenAges: '',
+      emergencyPhone: '',
+      emergencyContact: '',
     });
     setIsAdding(false);
     setEditingId(null);
@@ -98,6 +132,23 @@ export default function MembersModule({ members, departments, loading, onRefresh
         birthday: formData.birthday || null,
         address: formData.address || null,
         group: formData.group || null,
+        birthPlace: formData.birthPlace || null,
+        nationality: formData.nationality || null,
+        gender: formData.gender || null,
+        maritalStatus: formData.maritalStatus || null,
+        profession: formData.profession || null,
+        conversionDate: formData.conversionDate || null,
+        formerChurch: formData.formerChurch || null,
+        arrivalDate: formData.arrivalDate || null,
+        baptized: formData.baptized || null,
+        baptismDate: formData.baptismDate || null,
+        talents: formData.talents || null,
+        motivation: formData.motivation || null,
+        spouseName: formData.spouseName || null,
+        childrenCount: formData.childrenCount || null,
+        childrenAges: formData.childrenAges || null,
+        emergencyPhone: formData.emergencyPhone || null,
+        emergencyContact: formData.emergencyContact || null,
         createdAt: new Date().toISOString()
       });
       resetForm();
@@ -124,7 +175,24 @@ export default function MembersModule({ members, departments, loading, onRefresh
         ministry: formData.ministry,
         birthday: formData.birthday || null,
         address: formData.address || null,
-        group: formData.group || null
+        group: formData.group || null,
+        birthPlace: formData.birthPlace || null,
+        nationality: formData.nationality || null,
+        gender: formData.gender || null,
+        maritalStatus: formData.maritalStatus || null,
+        profession: formData.profession || null,
+        conversionDate: formData.conversionDate || null,
+        formerChurch: formData.formerChurch || null,
+        arrivalDate: formData.arrivalDate || null,
+        baptized: formData.baptized || null,
+        baptismDate: formData.baptismDate || null,
+        talents: formData.talents || null,
+        motivation: formData.motivation || null,
+        spouseName: formData.spouseName || null,
+        childrenCount: formData.childrenCount || null,
+        childrenAges: formData.childrenAges || null,
+        emergencyPhone: formData.emergencyPhone || null,
+        emergencyContact: formData.emergencyContact || null,
       });
       resetForm();
       onRefresh();
@@ -156,7 +224,24 @@ export default function MembersModule({ members, departments, loading, onRefresh
       ministry: member.ministry,
       birthday: member.birthday || '',
       address: member.address || '',
-      group: member.group || 'Aucun'
+      group: member.group || 'Aucun',
+      birthPlace: member.birthPlace || '',
+      nationality: member.nationality || '',
+      gender: member.gender || '',
+      maritalStatus: member.maritalStatus || '',
+      profession: member.profession || '',
+      conversionDate: member.conversionDate || '',
+      formerChurch: member.formerChurch || '',
+      arrivalDate: member.arrivalDate || '',
+      baptized: member.baptized || '',
+      baptismDate: member.baptismDate || '',
+      talents: member.talents || '',
+      motivation: member.motivation || '',
+      spouseName: member.spouseName || '',
+      childrenCount: member.childrenCount || '',
+      childrenAges: member.childrenAges || '',
+      emergencyPhone: member.emergencyPhone || '',
+      emergencyContact: member.emergencyContact || '',
     });
     setIsAdding(true);
     setViewingMember(null);
@@ -216,102 +301,180 @@ export default function MembersModule({ members, departments, loading, onRefresh
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Nom Complet *</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})}
                 placeholder="Ex: Jean-Louis Kabange"
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              />
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
-
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Adresse Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                placeholder="Ex: j.kabange@gmail.com"
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              />
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Date de Naissance</label>
+              <input type="date" value={formData.birthday} onChange={(e) => setFormData({...formData, birthday: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
-
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Numéro Téléphone / WhatsApp</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                placeholder="Ex: +33 6 12 34 56 78"
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              />
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Lieu de Naissance</label>
+              <input type="text" value={formData.birthPlace} onChange={(e) => setFormData({...formData, birthPlace: e.target.value})}
+                placeholder="Ex: Kinshasa"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Nationalité</label>
+              <input type="text" value={formData.nationality} onChange={(e) => setFormData({...formData, nationality: e.target.value})}
+                placeholder="Ex: Congolaise"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Sexe</label>
+              <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400">
+                <option value="">—</option><option value="Masculin">Masculin</option><option value="Féminin">Féminin</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Situation Matrimoniale</label>
+              <select value={formData.maritalStatus} onChange={(e) => setFormData({...formData, maritalStatus: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400">
+                <option value="">—</option><option value="Célibataire">Célibataire</option><option value="Marié(e)">Marié(e)</option><option value="Divorcé(e)">Divorcé(e)</option><option value="Veuf(ve)">Veuf(ve)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Profession</label>
+              <input type="text" value={formData.profession} onChange={(e) => setFormData({...formData, profession: e.target.value})}
+                placeholder="Ex: Enseignant"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Date de Naissance</label>
-              <input
-                type="date"
-                value={formData.birthday}
-                onChange={(e) => setFormData({...formData, birthday: e.target.value})}
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              />
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Email</label>
+              <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="Ex: j.kabange@gmail.com"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
-
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Téléphone / WhatsApp</label>
+              <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="Ex: +243 81 234 5678"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Adresse</label>
-              <input
-                type="text"
-                value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
+              <input type="text" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})}
                 placeholder="Ex: 12 Rue de l'Église, Kinshasa"
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-              />
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
             </div>
+          </div>
 
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-2">Vie Spirituelle</h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Date de Conversion</label>
+              <input type="date" value={formData.conversionDate} onChange={(e) => setFormData({...formData, conversionDate: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Ancienne Église</label>
+              <input type="text" value={formData.formerChurch} onChange={(e) => setFormData({...formData, formerChurch: e.target.value})}
+                placeholder="Ex: Assemblée de Dieu"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Date d'Arrivée dans l'Église</label>
+              <input type="date" value={formData.arrivalDate} onChange={(e) => setFormData({...formData, arrivalDate: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Baptême</label>
+              <select value={formData.baptized} onChange={(e) => setFormData({...formData, baptized: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400">
+                <option value="">—</option><option value="Oui">Oui</option><option value="Non">Non</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Date de Baptême</label>
+              <input type="date" value={formData.baptismDate} onChange={(e) => setFormData({...formData, baptismDate: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+          </div>
+
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-2">Engagement & Ministère</h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Ministère</label>
+              <select value={formData.ministry} onChange={(e) => setFormData({...formData, ministry: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400">
+                {MINISTRIES.map(m => (<option key={m} value={m}>{m}</option>))}
+              </select>
+            </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Groupe</label>
-              <select
-                value={formData.group}
-                onChange={(e) => setFormData({...formData, group: e.target.value})}
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400"
-              >
-                {GROUPS.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
+              <select value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400">
+                {GROUPS.map(g => (<option key={g} value={g}>{g}</option>))}
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Statut d'Activité</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value as MemberStatus})}
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400"
-              >
-                <option value="Actif">Actif (Régulier aux cultes)</option>
-                <option value="Inactif">Inactif (Absent prolongé)</option>
-                <option value="En observation">En observation (Nouveau membre / Intégration)</option>
-              </select>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Dons / Talents</label>
+              <textarea value={formData.talents} onChange={(e) => setFormData({...formData, talents: e.target.value})}
+                placeholder="Ex: Chant, musique, enseignement..."
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 min-h-[60px]" />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Ministère / Département de Service</label>
-              <select
-                value={formData.ministry}
-                onChange={(e) => setFormData({...formData, ministry: e.target.value})}
-                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-indigo-600 dark:focus:outline-indigo-400"
-              >
-                {MINISTRIES.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Motivation</label>
+              <textarea value={formData.motivation} onChange={(e) => setFormData({...formData, motivation: e.target.value})}
+                placeholder="Pourquoi souhaitez-vous servir ?"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 min-h-[60px]" />
             </div>
           </div>
+
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-2">Famille</h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Nom du Conjoint(e)</label>
+              <input type="text" value={formData.spouseName} onChange={(e) => setFormData({...formData, spouseName: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Nombre d'Enfants</label>
+              <input type="text" value={formData.childrenCount} onChange={(e) => setFormData({...formData, childrenCount: e.target.value})}
+                placeholder="Ex: 3"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Âges des Enfants</label>
+              <input type="text" value={formData.childrenAges} onChange={(e) => setFormData({...formData, childrenAges: e.target.value})}
+                placeholder="Ex: 5, 8, 12 ans"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Téléphone Urgence</label>
+              <input type="tel" value={formData.emergencyPhone} onChange={(e) => setFormData({...formData, emergencyPhone: e.target.value})}
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Contact d'Urgence (Nom & Lien)</label>
+              <input type="text" value={formData.emergencyContact} onChange={(e) => setFormData({...formData, emergencyContact: e.target.value})}
+                placeholder="Ex: Marie Kabange, sœur"
+                className="w-full text-sm p-2 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-indigo-600 dark:focus:outline-indigo-400 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
+            </div>
+          </div>
+
+          <h4 className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-2">Statut & Service</h4>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
             <button
@@ -595,12 +758,114 @@ export default function MembersModule({ members, departments, loading, onRefresh
                   <span className="text-slate-800 dark:text-slate-200">{viewingMember.birthday ? formatDate(viewingMember.birthday) : "Non renseigné"}</span>
                 </div>
                 <div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Lieu de Naissance</span>
+                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.birthPlace || "Non renseigné"}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Nationalité</span>
+                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.nationality || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Sexe</span>
+                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.gender || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Situation Matri.</span>
+                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.maritalStatus || "—"}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Profession</span>
+                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.profession || "—"}</span>
+                </div>
+                <div>
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Adresse</span>
                   <span className="text-slate-800 dark:text-slate-200">{viewingMember.address || "Non renseignée"}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+                <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 block mb-2 uppercase tracking-wider">Vie Spirituelle</span>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Conversion</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.conversionDate ? formatDate(viewingMember.conversionDate) : "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Ancienne Église</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.formerChurch || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Arrivée</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.arrivalDate ? formatDate(viewingMember.arrivalDate) : "—"}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Baptême</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.baptized || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Date de Baptême</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.baptismDate ? formatDate(viewingMember.baptismDate) : "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+                <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 block mb-2 uppercase tracking-wider">Engagement & Famille</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Ministère</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.ministry}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Groupe</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.group && viewingMember.group !== 'Aucun' ? viewingMember.group : "Aucun"}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Dons / Talents</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.talents || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Motivation</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.motivation || "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+                <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 block mb-2 uppercase tracking-wider">Famille</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Conjoint(e)</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.spouseName || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Enfants</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.childrenCount ? `${viewingMember.childrenCount} (${viewingMember.childrenAges || "âges non renseignés"})` : "—"}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Tél. Urgence</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.emergencyPhone || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Contact Urgence</span>
+                    <span className="text-slate-800 dark:text-slate-200">{viewingMember.emergencyContact || "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-700 pt-3">
                 <div>
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Statut</span>
                   <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-md mt-0.5 ${
@@ -608,17 +873,6 @@ export default function MembersModule({ members, departments, loading, onRefresh
                     viewingMember.status === 'Inactif' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
                     'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300'
                   }`}>{viewingMember.status}</span>
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Ministère</span>
-                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.ministry}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Groupe</span>
-                  <span className="text-slate-800 dark:text-slate-200">{viewingMember.group && viewingMember.group !== 'Aucun' ? viewingMember.group : "Aucun"}</span>
                 </div>
                 <div>
                   <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Date d'Inscription</span>
