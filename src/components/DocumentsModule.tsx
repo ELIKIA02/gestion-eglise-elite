@@ -714,7 +714,7 @@ ${content}
               <div style={isA5 ? { fontSize: '7pt' } : {}}>
                 {ficheContent()}
               </div>
-              {ficheType !== 'renseignement' && (
+              {!isA5 && ficheType !== 'renseignement' && (
                 <div style={{ marginTop: '28px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
                     <div style={{ textAlign: 'center', width: '200px' }}>
