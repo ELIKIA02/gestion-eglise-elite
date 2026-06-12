@@ -557,15 +557,16 @@ async function startServer() {
       ].join('\n');
 
       const targetPhone = process.env.CHURCH_WHATSAPP || '';
-      let sent = false;
-      if (targetPhone) {
-        try { await sendMessage(targetPhone, message); sent = true; } catch {}
+      try {
+        if (targetPhone) await sendMessage(targetPhone, message);
+      } catch (e) {
+        console.error("[FORM] Échec envoi WhatsApp:", e);
       }
 
       if (isForm) {
-        return res.send(successPage(sent));
+        return res.send(successPage(true));
       }
-      res.json({ success: true, sent });
+      res.json({ success: true });
     } catch (err: any) {
       const isForm = req.headers['content-type']?.includes('application/x-www-form-urlencoded');
       if (isForm) return res.send(successPage(false, err.message));
