@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, addDoc, db } from '../firebase';
+import { collection, addDoc, query, onSnapshot, db } from '../firebase';
 import { Member, ChurchSettings } from '../types';
 import { Church, Search, Plus, Printer, FileText } from 'lucide-react';
 
@@ -56,24 +56,19 @@ export default function SacramentsModule({ members, settings }: SacramentsModule
   });
 
   useEffect(() => {
-    const unsub = (collection as any)(db, COLLECTION);
-    const ref = (collection as any)(db, COLLECTION);
-    const { onSnapshot: snap, query: q } = require('../firebase');
-    try {
-      const unsub = snap(q(ref), (snapshot: any) => {
-        const data: SacramentEntry[] = [];
-        snapshot.forEach((doc: any) => {
-          const d = doc.data();
-          data.push({ id: doc.id, ...d });
-        });
-        data.sort((a, b) => b.createdAt?.localeCompare?.(a.createdAt) || 0);
-        setEntries(data);
-        setLoading(false);
+    const ref = collection(db, COLLECTION);
+    const qRef = query(ref);
+    const unsub = onSnapshot(qRef, (snapshot) => {
+      const data: SacramentEntry[] = [];
+      snapshot.forEach((doc: any) => {
+        const d = doc.data();
+        data.push({ id: doc.id, ...d });
       });
-      return () => unsub();
-    } catch {
+      data.sort((a, b) => b.createdAt?.localeCompare?.(a.createdAt) || 0);
+      setEntries(data);
       setLoading(false);
-    }
+    }, () => setLoading(false));
+    return () => unsub();
   }, []);
 
   const filteredEntries = useMemo(() => {
