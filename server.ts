@@ -106,6 +106,7 @@ async function startServer() {
   const isDev = process.env.NODE_ENV !== "production";
 
   app.use(express.json({ limit: '5mb' }));
+  app.use(express.urlencoded({ extended: true }));
 
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -457,16 +458,15 @@ async function startServer() {
 
   app.get("/api/renseignement/form", (_req, res) => {
     const appName = process.env.APP_NAME || "ELIKIA EKLESIA";
-    const churchPhone = process.env.CHURCH_WHATSAPP || '+242';
     const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Fiche de Renseignement — ${appName}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;padding:16px;padding-bottom:120px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f1f5f9;color:#1e293b;padding:16px;padding-bottom:100px}
   .container{max-width:560px;margin:0 auto}
   .header{text-align:center;margin-bottom:20px;padding-top:10px}
   .header h1{font-size:20px;font-weight:800}
@@ -477,20 +477,15 @@ async function startServer() {
   .field label{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:3px}
   .field input,.field select{width:100%;padding:12px;font-size:15px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;color:#1e293b;outline:none;-webkit-appearance:none;appearance:none}
   .field input:focus,.field select:focus{border-color:#4f46e5}
-  .field .radio-group{display:flex;gap:8px;padding-top:2px}
-  .field .radio-group label{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center;background:#f8fafc;transition:all .15s;user-select:none;-webkit-user-select:none}
+  .field .radio-group{display:flex;gap:8px}
+  .field .radio-group label{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center;background:#f8fafc;transition:all .15s;user-select:none;-webkit-user-select:none}
   .field .radio-group label:has(input:checked){border-color:#4f46e5;background:#eef2ff;color:#4f46e5;font-weight:600}
   .field .radio-group input[type="radio"]{width:18px;height:18px;accent-color:#4f46e5;margin:0;cursor:pointer}
   select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
-  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0;display:flex;gap:8px;box-shadow:0 -2px 10px rgba(0,0,0,.05);z-index:100}
-  .actions button{flex:1;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:opacity .15s}
+  .actions{position:fixed;bottom:0;left:0;right:0;padding:12px 16px;background:#fff;border-top:1px solid #e2e8f0;z-index:100}
+  .actions button{width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;background:#4f46e5;color:#fff;transition:opacity .15s}
   .actions button:active{opacity:.7}
-  .btn-send{background:#4f46e5;color:#fff}
-  .btn-download{background:#e2e8f0;color:#475569}
-  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#059669;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:200;display:none;text-align:center;max-width:90%}
-  .toast.error{background:#dc2626}
-  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
-  @keyframes spin{to{transform:rotate(360deg)}}
+  .actions button:disabled{opacity:.5}
 </style>
 </head>
 <body>
@@ -500,52 +495,35 @@ async function startServer() {
     <p>Fiche de Renseignement — Nouveau Membre</p>
   </div>
 
+  <form action="/api/renseignement/submit" method="POST">
   <div class="section"><h2>État Civil</h2>
-    <div class="field"><label>Nom & Prénoms *</label><input type="text" id="name" placeholder="Votre nom complet" required></div>
+    <div class="field"><label>Nom & Prénoms *</label><input type="text" name="name" placeholder="Votre nom complet" required></div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Date de Naissance</label><input type="date" id="birthday"></div>
-      <div style="flex:1"><label>Lieu de Naissance</label><input type="text" id="birthPlace" placeholder="Ville, Pays"></div>
+      <div style="flex:1"><label>Date de Naissance</label><input type="date" name="birthday"></div>
+      <div style="flex:1"><label>Lieu de Naissance</label><input type="text" name="birthPlace" placeholder="Ville, Pays"></div>
     </div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Nationalité</label><input type="text" id="nationality" placeholder="Congolaise"></div>
+      <div style="flex:1"><label>Nationalité</label><input type="text" name="nationality" placeholder="Congolaise"></div>
       <div style="flex:1"><label>Sexe</label><div class="radio-group"><label><input type="radio" name="gender" value="M"> Masculin</label><label><input type="radio" name="gender" value="F"> Féminin</label></div></div>
     </div>
     <div class="field"><label>Situation Matrimoniale</label>
-      <select id="maritalStatus"><option value="">Sélectionnez...</option><option>Célibataire</option><option>Marié(e)</option><option>Divorcé(e)</option><option>Veuf(ve)</option></select>
+      <select name="maritalStatus"><option value="">Sélectionnez...</option><option>Célibataire</option><option>Marié(e)</option><option>Divorcé(e)</option><option>Veuf(ve)</option></select>
     </div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Profession</label><input type="text" id="profession" placeholder="Votre métier"></div>
-      <div style="flex:1"><label>Téléphone *</label><input type="tel" id="phone" placeholder="+242 XX XXX XXXX" required></div>
+      <div style="flex:1"><label>Profession</label><input type="text" name="profession" placeholder="Votre métier"></div>
+      <div style="flex:1"><label>Téléphone *</label><input type="tel" name="phone" placeholder="+242 XX XXX XXXX" required></div>
     </div>
     <div class="field" style="display:flex;gap:10px">
-      <div style="flex:1"><label>Email</label><input type="email" id="email" placeholder="exemple@email.com"></div>
-      <div style="flex:1"><label>Adresse</label><input type="text" id="address" placeholder="22 rue Owando, Talangaï"></div>
+      <div style="flex:1"><label>Email</label><input type="email" name="email" placeholder="exemple@email.com"></div>
+      <div style="flex:1"><label>Adresse</label><input type="text" name="address" placeholder="22 rue Owando, Talangaï"></div>
     </div>
   </div>
-
   <div style="height:80px"></div>
 </div>
 <div class="actions">
-  <button class="btn-send" id="sendBtn">📤 Envoyer à l'Église</button>
+  <button type="submit" id="sendBtn">📤 Envoyer à l'Église</button>
 </div>
-<div id="toast" class="toast"></div>
-<script>
-(function(){
-function g(i){return document.getElementById(i)}
-function v(i){const e=g(i);return e?e.value:''}
-function rv(n){const e=document.querySelector('input[name="'+n+'"]:checked');return e?e.value:''}
-function st(m,e){const t=g('toast');if(!t)return;t.textContent=m;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(function(){t.style.display='none'},5000)}
-function gd(){return{name:v('name'),birthday:v('birthday'),birthPlace:v('birthPlace'),nationality:v('nationality'),gender:rv('gender'),maritalStatus:v('maritalStatus'),profession:v('profession'),phone:v('phone'),email:v('email'),address:v('address')}}
-async function sf(){var d=gd();if(!d.name.trim()){st('Veuillez remplir le nom',true);return}
-  if(!d.phone.trim()){st('Veuillez remplir le téléphone',true);return}
-  var btn=g('sendBtn');if(!btn)return;btn.innerHTML='<span class="spinner"></span> Envoi...';btn.disabled=true;
-  try{var r=await fetch('/api/renseignement/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:d})});
-    var j=await r.json();if(j.success){st('✅ Fiche envoyée avec succès !')}else{st('❌ '+(j.error||'Erreur'),true)}
-  }catch(e){st('❌ Problème de connexion. Vérifiez votre connexion internet.',true)}
-  btn.innerHTML='📤 Envoyer à l\'Église';btn.disabled=false}
-g('sendBtn').onclick=sf;
-})();
-<\/script>
+</form>
 </body>
 </html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -554,19 +532,17 @@ g('sendBtn').onclick=sf;
 
   app.post("/api/renseignement/submit", async (req, res) => {
     try {
-      const { data } = req.body;
-      if (!data) {
-        return res.status(400).json({ success: false, error: "Données manquantes" });
+      const isForm = req.headers['content-type']?.includes('application/x-www-form-urlencoded');
+      const data = isForm ? req.body : req.body.data;
+      if (!data || !data.name) {
+        const errMsg = "Données incomplètes — nom requis";
+        if (isForm) return res.send(successPage(false, errMsg));
+        return res.status(400).json({ success: false, error: errMsg });
       }
 
-      const waStatus = getStatus();
-      if (waStatus !== 'connected') {
-        return res.status(400).json({ success: false, error: "WhatsApp non connecté", waStatus });
-      }
-
-      const format = (v: any) => v || '—';
+      const format = (v: any) => (v && v.trim ? v.trim() : v) || '—';
       const message = [
-        "📋 *NOUVELLE FICHE DE RENSEIGNEMENT — MEMBRE*",
+        "📋 *NOUVELLE FICHE DE RENSEIGNEMENT*",
         "",
         "━ *État Civil* ━",
         `👤 Nom : ${format(data.name)}`,
@@ -577,36 +553,33 @@ g('sendBtn').onclick=sf;
         `📧 Email : ${format(data.email)}  📞 Tél : ${format(data.phone)}`,
         `🏠 Adresse : ${format(data.address)}`,
         "",
-        "━ *Vie Spirituelle* ━",
-        `🙏 Conversion : ${format(data.conversionDate)}`,
-        `⛪ Ancienne église : ${format(data.formerChurch)}`,
-        `📅 Arrivée : ${format(data.arrivalDate)}`,
-        `🕊️ Baptisé : ${format(data.baptized)}${data.baptismDate ? ` (${data.baptismDate})` : ''}`,
-        "",
-        "━ *Engagement* ━",
-        `🎯 Talents : ${format(data.talents)}`,
-        `🔥 Motivation : ${format(data.motivation)}`,
-        "",
-        "━ *Famille* ━",
-        `👫 Conjoint(e) : ${format(data.spouseName)}`,
-        `👶 Enfants : ${data.childrenCount || '—'} — Âges : ${format(data.childrenAges)}`,
-        "",
-        "━ *Contact Urgence* ━",
-        `📞 ${format(data.emergencyPhone)} — ${format(data.emergencyContact)}`,
-        "",
         "📎 *Envoyé depuis le formulaire mobile*"
       ].join('\n');
 
       const targetPhone = process.env.CHURCH_WHATSAPP || '';
+      let sent = false;
       if (targetPhone) {
-        await sendMessage(targetPhone, message);
-        return res.json({ success: true, sent: true });
+        try { await sendMessage(targetPhone, message); sent = true; } catch {}
       }
-      res.json({ success: true, sent: false, info: "Aucun CHURCH_WHATSAPP configuré" });
+
+      if (isForm) {
+        return res.send(successPage(sent));
+      }
+      res.json({ success: true, sent });
     } catch (err: any) {
+      const isForm = req.headers['content-type']?.includes('application/x-www-form-urlencoded');
+      if (isForm) return res.send(successPage(false, err.message));
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
+  function successPage(success: boolean, error?: string): string {
+    const appName = process.env.APP_NAME || "ELIKIA EKLESIA";
+    if (success) {
+      return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Merci — ${appName}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;margin:0}.card{background:#fff;border-radius:16px;padding:32px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:400px}.icon{font-size:48px;margin-bottom:12px}h1{font-size:20px;color:#059669;margin:0 0 8px}p{font-size:14px;color:#64748b;margin:0 0 20px;line-height:1.5}.btn{display:inline-block;background:#4f46e5;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600}</style></head><body><div class="card"><div class="icon">✅</div><h1>Fiche envoyée avec succès !</h1><p>Merci ! Vos informations ont bien été transmises à l'église.<br>Nous vous contacterons dès que possible.</p><a class="btn" href="/api/renseignement/form">⬅ Retour</a></div></body></html>`;
+    }
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Erreur — ${appName}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;margin:0}.card{background:#fff;border-radius:16px;padding:32px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.08);max-width:400px}.icon{font-size:48px;margin-bottom:12px}h1{font-size:20px;color:#dc2626;margin:0 0 8px}p{font-size:14px;color:#64748b;margin:0 0 20px;line-height:1.5}.btn{display:inline-block;background:#4f46e5;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600}</style></head><body><div class="card"><div class="icon">❌</div><h1>Erreur</h1><p>${error || 'Impossible d\'envoyer la fiche. Veuillez réessayer.'}</p><a class="btn" href="/api/renseignement/form">⬅ Réessayer</a></div></body></html>`;
+  }
 
   app.post("/api/renseignement/send-form", async (req, res) => {
     try {
