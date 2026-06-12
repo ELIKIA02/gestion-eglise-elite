@@ -281,3 +281,15 @@ export async function sendGroupImage(groupJid: string, imageBase64: string, capt
   await sock.sendMessage(groupJid, { image: buffer, caption });
   return true;
 }
+
+export async function sendDocumentMessage(to: string, buffer: Buffer, fileName: string, mimetype: string): Promise<boolean> {
+  if (!sock || status !== 'connected') throw new Error('WhatsApp non connecté');
+  const cleanNumber = to.replace(/[^0-9]/g, '');
+  if (!cleanNumber) throw new Error(`Numéro invalide: ${to}`);
+  await sock.sendMessage(`${cleanNumber}@s.whatsapp.net`, {
+    document: buffer,
+    fileName,
+    mimetype,
+  });
+  return true;
+}

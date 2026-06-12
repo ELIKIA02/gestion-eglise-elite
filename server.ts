@@ -4,7 +4,7 @@ import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
-import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage } from "./whatsapp-client";
 
 dotenv.config();
 
@@ -105,7 +105,7 @@ async function startServer() {
   const API_PORT = parseInt(process.env.API_PORT || '3001', 10);
   const isDev = process.env.NODE_ENV !== "production";
 
-  app.use(express.json());
+  app.use(express.json({ limit: '5mb' }));
 
   const SYSTEM_PROMPTS: Record<string, string> = {
     sermon: "Tu es un pasteur théologien compétent et bienveillant. Crée un plan de prédication structuré et inspirant en français. Inclue : Versets de référence, Thème principal, une introduction marquante, 3 points principaux expliqués avec des exemples de la vie quotidienne, et une conclusion chaleureuse avec une prière de consécration. Réoriente toujours vers l'espérance chrétienne. Réponds en Markdown soigné.",
@@ -498,6 +498,29 @@ async function startServer() {
         return res.json({ success: true, sent: true });
       }
       res.json({ success: true, sent: false, info: "Aucun CHURCH_WHATSAPP configuré" });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/renseignement/send-form", async (req, res) => {
+    try {
+      const { phone, htmlContent } = req.body;
+      if (!phone || !htmlContent) {
+        return res.status(400).json({ success: false, error: "Numéro et contenu HTML requis" });
+      }
+
+      const waStatus = getStatus();
+      if (waStatus !== 'connected') {
+        return res.status(400).json({ success: false, error: "WhatsApp non connecté", waStatus });
+      }
+
+      const buffer = Buffer.from(htmlContent, 'utf-8');
+      await sendDocumentMessage(phone, buffer, 'Formulaire-Renseignement.html', 'text/html');
+
+      await sendMessage(phone, "📋 *Formulaire de Renseignement* 📋\n\nVous recevez ce formulaire à remplir.\n1. Ouvrez le fichier ci-joint (.html)\n2. Remplissez tous les champs\n3. Appuyez sur « Envoyer à l'Église »\n4. Les données nous parviendront directement par WhatsApp\n\nMerci et que Dieu vous bénisse ! 🙏");
+
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
