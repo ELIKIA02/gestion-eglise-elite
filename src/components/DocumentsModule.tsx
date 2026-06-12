@@ -61,14 +61,6 @@ function generateRef(): string {
 }
 
 const FICHE_TYPES: { id: FicheType; label: string; icon: string; desc: string }[] = [
-  { id: 'membre', label: 'Fiche Membre', icon: '👤', desc: 'Inscription et suivi des membres' },
-  { id: 'finance', label: 'Fiche Finances', icon: '💰', desc: 'Transactions et dons' },
-  { id: 'culte', label: 'Fiche Culte', icon: '⛪', desc: 'Planification des cultes' },
-  { id: 'communication', label: 'Fiche Communication', icon: '📨', desc: 'Messages et annonces' },
-  { id: 'enseignement', label: "Fiche d'Enseignement", icon: '📖', desc: 'Études et exhortations' },
-  { id: 'liturgique', label: 'Fiche Liturgique', icon: '🕯️', desc: 'Thèmes et célébrations' },
-  { id: 'departement', label: 'Fiche Département', icon: '🏛️', desc: 'Ministères et départements' },
-  { id: 'presence', label: 'Fiche Présence', icon: '✅', desc: 'Assistance aux cultes' },
   { id: 'hebdomadaire', label: 'Suivi Hebdomadaire', icon: '📊', desc: 'Participants, offrandes et dépenses sur 3 jours' },
   { id: 'renseignement', label: "Renseignement Nouveau Membre", icon: '📋', desc: "Fiche d'accueil et d'information" },
 ];
@@ -83,7 +75,7 @@ interface DocumentsModuleProps { settings: ChurchSettings | null; members: Membe
 
 export default function DocumentsModule({ settings, members }: DocumentsModuleProps) {
   const [docType, setDocType] = useState<DocType>('certificat');
-  const [ficheType, setFicheType] = useState<FicheType>('membre');
+  const [ficheType, setFicheType] = useState<FicheType>('hebdomadaire');
   const [template, setTemplate] = useState<Template>('classique');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [lignes, setLignes] = useState<LigneDevis[]>([{ id: genId(), description: '', quantite: 1, prixUnitaire: 0 }]);
