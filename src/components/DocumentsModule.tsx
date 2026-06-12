@@ -110,15 +110,13 @@ export default function DocumentsModule({ settings, members }: DocumentsModulePr
   @page { size: A4; margin: 15mm; }
   body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   table { page-break-inside: avoid; }
-  @media print {
-    body { margin: 0; padding: 0; }
-  }
 </style>
 </head>
 <body>${content}</body>
 </html>`);
     win.document.close();
     win.focus();
+    win.onafterprint = () => win.close();
     setTimeout(() => { win.print(); }, 500);
   };
 
@@ -613,17 +611,19 @@ ${content}
           <div style={S.borderDecor}>
             <HeaderBlock />
             {ficheContent()}
-            <div style={{ marginTop: '28px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
-                <div style={{ textAlign: 'center', width: '200px' }}>
-                  <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Signature du responsable</div>
+            {ficheType !== 'renseignement' && (
+              <div style={{ marginTop: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9pt' }}>
+                  <div style={{ textAlign: 'center', width: '200px' }}>
+                    <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Signature du responsable</div>
+                  </div>
+                  <div style={{ textAlign: 'center', width: '200px' }}>
+                    <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Date</div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'center', width: '200px' }}>
-                  <div style={{ borderTop: `1px solid ${T.color}`, paddingTop: '4px', marginTop: '20px' }}>Date</div>
-                </div>
+                <CachetBlock />
               </div>
-              <CachetBlock />
-            </div>
+            )}
             {footer}
           </div>
           <BottomDecor />
