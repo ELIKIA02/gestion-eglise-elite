@@ -102,6 +102,8 @@ export interface ChurchSettings {
     attendanceAlert: boolean;
     reminderDays: number;
   };
+  liturgicalSeasons?: string;
+  liturgicalTypes?: string;
   updatedAt: string;
 }
 
@@ -144,8 +146,9 @@ export interface LiturgicalTheme {
   preacher: string;
   bibleText: string;
   description: string;
-  themeType: 'dimanche' | 'mercredi' | 'special' | 'jeune' | 'seminaire';
-  season?: 'avent' | 'careme' | 'paques' | 'pentecote' | 'ordinaire' | 'noel';
+  themeType: string;
+  season?: string;
   hymns?: string;
+  scheduled?: boolean;
   createdAt: string;
 }

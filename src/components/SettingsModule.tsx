@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, setDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { ChurchSettings } from '../types';
-import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2, Download, UploadCloud, Sun, Moon, Bell, Cloud, Globe, Smartphone } from 'lucide-react';
+import { Settings, Check, RefreshCw, FileText, Sliders, Layout, Eye, HelpCircle, Key, Upload, Trash2, Download, UploadCloud, Sun, Moon, Bell, Cloud, Globe, Smartphone, Bookmark } from 'lucide-react';
 
 interface SettingsModuleProps {
   settings: ChurchSettings | null;
@@ -19,6 +19,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   const [mistralApiKey, setMistralApiKey] = useState('');
   const [cachetBase64, setCachetBase64] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [liturgicalSeasons, setLiturgicalSeasons] = useState('');
+  const [liturgicalTypes, setLiturgicalTypes] = useState('');
   const [notifBirthdayReminder, setNotifBirthdayReminder] = useState(true);
   const [notifEventReminder, setNotifEventReminder] = useState(true);
   const [notifLowBalanceAlert, setNotifLowBalanceAlert] = useState(true);
@@ -76,6 +78,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setMistralApiKey(settings.mistralApiKey || '');
       setCachetBase64(settings.cachetBase64 || '');
       setTheme(settings.theme || 'light');
+      setLiturgicalSeasons(settings.liturgicalSeasons || "Avent, Carême, Pâques, Pentecôte, Ordinaire, Noël");
+      setLiturgicalTypes(settings.liturgicalTypes || "Dimanche, Mercredi, Spécial, Jeûne, Séminaire");
       setNotifBirthdayReminder(settings.notifications?.birthdayReminder ?? true);
       setNotifEventReminder(settings.notifications?.eventReminder ?? true);
       setNotifLowBalanceAlert(settings.notifications?.lowBalanceAlert ?? true);
@@ -112,6 +116,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
         mistralApiKey: mistralApiKey.trim(),
         cachetBase64: cachetBase64.trim(),
         theme: theme,
+        liturgicalSeasons: liturgicalSeasons.trim(),
+        liturgicalTypes: liturgicalTypes.trim(),
         notifications: {
           birthdayReminder: notifBirthdayReminder,
           eventReminder: notifEventReminder,
@@ -147,6 +153,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setMistralApiKey('');
       setCachetBase64('');
       setTheme('light');
+      setLiturgicalSeasons("Avent, Carême, Pâques, Pentecôte, Ordinaire, Noël");
+      setLiturgicalTypes("Dimanche, Mercredi, Spécial, Jeûne, Séminaire");
       setNotifBirthdayReminder(true);
       setNotifEventReminder(true);
       setNotifLowBalanceAlert(true);
@@ -339,6 +347,37 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
               />
               <span className="text-[10px] text-slate-400 block font-normal leading-normal mt-1">
                 Le système prendra automatiquement la date exacte de ce jour programmé lors de la saisie (ex : Dimanche correspondra à la date du dimanche en cours / à venir).
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-200/65 space-y-4 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Bookmark className="w-4 h-4 text-indigo-600" />
+              Configuration des Thèmes Liturgiques
+            </h3>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-650 block uppercase tracking-wider">
+                Saisons liturgiques (séparées par des virgules)
+              </label>
+              <input type="text" value={liturgicalSeasons}
+                onChange={(e) => setLiturgicalSeasons(e.target.value)}
+                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white font-medium"
+                placeholder="Ex: Avent, Carême, Pâques, Pentecôte, Ordinaire, Noël" />
+              <span className="text-[10px] text-slate-400 block font-normal leading-normal mt-1">
+                Ces saisons apparaîtront dans le module Thèmes Liturgiques.
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-650 block uppercase tracking-wider">
+                Types de célébrations (séparés par des virgules)
+              </label>
+              <input type="text" value={liturgicalTypes}
+                onChange={(e) => setLiturgicalTypes(e.target.value)}
+                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white font-medium"
+                placeholder="Ex: Dimanche, Mercredi, Spécial, Jeûne, Séminaire" />
+              <span className="text-[10px] text-slate-400 block font-normal leading-normal mt-1">
+                Types de célébrations disponibles pour les thèmes liturgiques.
               </span>
             </div>
           </div>
