@@ -33,10 +33,11 @@ function isDigit(c: string): boolean {
 }
 
 function applyUnicode(text: string, offset: number, includeDigits: boolean): string {
+  const loOffset = offset - 6; // minuscules : décalage différent dans le bloc Mathematical Alphanumerics
   return text.split('').map(c => {
     const code = c.charCodeAt(0);
     if (code >= 0x41 && code <= 0x5A) return String.fromCharCode(code + offset);
-    if (code >= 0x61 && code <= 0x7A) return String.fromCharCode(code + offset);
+    if (code >= 0x61 && code <= 0x7A) return String.fromCharCode(code + loOffset);
     if (includeDigits && code >= 0x30 && code <= 0x39) return String.fromCharCode(code + FB_BOLD_NUM_OFFSET);
     return c;
   }).join('');
