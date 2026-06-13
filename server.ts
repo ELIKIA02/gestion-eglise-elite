@@ -769,24 +769,47 @@ async function startServer() {
     }
   });
 
-  // Tester la capacité à publier (vérifie les permissions réelles du token Page)
+  // Diagnostic complet des permissions d'un token Page
   app.post("/api/facebook/test-publish", async (req, res) => {
     try {
       const { pageId, accessToken } = req.body;
       if (!pageId || !accessToken) return res.status(400).json({ success: false, error: "pageId et accessToken requis" });
+      const results: any = {};
+
+      // 1) Vérifier l'identité du token
+      const meRes = await fetch(`https://graph.facebook.com/v19.0/me?access_token=${accessToken}`);
+      const meData: any = await meRes.json();
+      results.tokenIdentity = meData;
+
+      // 2) Essayer de lire le feed (pages_read_engagement)
+      const feedRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed?limit=1&access_token=${accessToken}`);
+      const feedData: any = await feedRes.json();
+      results.canReadFeed = !feedData.error;
+
+      // 3) Essayer de publier
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: 'Test de publication depuis l\'app de gestion d\'église — ignorer ce message', access_token: accessToken }),
       });
-      const data: any = await fbRes.json();
-      if (data.id) {
-        // Supprimer immédiatement le post de test
-        await fetch(`https://graph.facebook.com/v19.0/${data.id}?access_token=${accessToken}`, { method: 'DELETE' });
-        res.json({ success: true, message: '✅ Publication OK (post de test supprimé)' });
+      const postData: any = await fbRes.json();
+      if (postData.id) {
+        await fetch(`https://graph.facebook.com/v19.0/${postData.id}?access_token=${accessToken}`, { method: 'DELETE' });
+        results.canPublish = true;
       } else {
-        res.json({ success: false, error: data.error?.message || 'Erreur inconnue', code: data.error?.code });
+        results.canPublish = false;
+        results.publishError = postData.error?.message;
       }
+
+      // 4) Résumé
+      const perms = [];
+      if (results.canReadFeed) perms.push('pages_read_engagement');
+      if (results.canPublish) perms.push('pages_manage_posts');
+      results.summary = { detectedPermissions: perms, missing: [] };
+      if (!results.canReadFeed) results.summary.missing.push('pages_read_engagement');
+      if (!results.canPublish) results.summary.missing.push('pages_manage_posts');
+
+      res.json({ success: true, ...results });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

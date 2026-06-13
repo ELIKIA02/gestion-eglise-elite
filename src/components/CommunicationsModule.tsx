@@ -503,10 +503,16 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         body: JSON.stringify({ pageId: fbPageId, accessToken: token }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.summary) {
+        const perms = data.summary.detectedPermissions.join(', ') || '(aucune)';
+        const missing = data.summary.missing.length > 0 ? `\n❌ Manque: ${data.summary.missing.join(', ')}` : '';
+        setFbResult(
+          `🔍 Token: ${data.tokenIdentity?.name || '?'}\n✅ Pages_read_engagement: ${data.canReadFeed ? 'OUI' : 'NON'}\n✅ Pages_manage_posts: ${data.canPublish ? 'OUI' : 'NON'}\nPermissions détectées: ${perms}${missing}`
+        );
+      } else if (data.success && data.message) {
         setFbResult('✅ ' + data.message);
       } else {
-        setFbResult(`❌ Code ${data.code || '?'} : ${data.error}`);
+        setFbResult(`❌ ${data.error || 'Erreur inconnue'}`);
       }
     } catch (err: any) {
       setFbResult(`❌ Erreur: ${err.message}`);
@@ -1210,7 +1216,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                 </button>
               </div>
               {fbResult && (
-                <div className={`p-3 rounded-lg text-xs ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                <div className={`p-3 rounded-lg text-xs whitespace-pre-line ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
                     {fbResult}
                 </div>
               )}

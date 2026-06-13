@@ -708,7 +708,7 @@ export default function EnseignementModule({ settings, members, departments }: E
                     {fbSending ? 'Publication...' : fbScheduleMode ? 'Programmer' : `Publier sur Facebook`}
                   </button>
                   {fbResult && (
-                    <div className={`p-2 rounded text-[10px] ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                    <div className={`p-2 rounded text-[10px] whitespace-pre-line ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
                       {fbResult}
                     </div>
                   )}
