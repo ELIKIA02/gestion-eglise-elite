@@ -18,10 +18,11 @@ import SacramentsModule from './components/SacramentsModule';
 import RessourcesModule from './components/RessourcesModule';
 import PresenceModule from './components/PresenceModule';
 import LiturgicalThemesModule from './components/LiturgicalThemesModule';
+import HelpModule from './components/HelpModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Church, UserCheck, Bookmark } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Church, UserCheck, Bookmark, HelpCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -273,6 +274,7 @@ export default function App() {
     { id: 'users', label: 'Utilisateurs', icon: Shield },
     { id: 'audit', label: 'Audit Église', icon: ClipboardCheck },
     { id: 'reports', label: 'Rapports', icon: FileBarChart2 },
+    { id: 'help', label: 'Aide', icon: HelpCircle },
     { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 
@@ -427,6 +429,9 @@ export default function App() {
           )}
           {activeTab === 'reports' && (
             <ReportsModule transactions={transactions} events={events} members={members} settings={settings} />
+          )}
+          {activeTab === 'help' && (
+            <HelpModule />
           )}
           {activeTab === 'settings' && (
             <SettingsModule settings={settings} loading={loadingSettings} onRefresh={() => {}} />
