@@ -751,13 +751,19 @@ async function startServer() {
     try {
       const { accessToken } = req.body;
       if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
-      const fbRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
-      const data: any = await fbRes.json();
-      if (data.data) {
-        res.json({ success: true, pages: data.data.map((p: any) => ({ id: p.id, name: p.name, category: p.category, picture: p.picture?.data?.url || null })) });
-      } else {
-        res.status(400).json({ success: false, error: data.error?.message || 'Token invalide' });
+      // Essayer me/accounts (token User)
+      const accRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
+      const accData: any = await accRes.json();
+      if (accData?.data) {
+        return res.json({ success: true, pages: accData.data.map((p: any) => ({ id: p.id, name: p.name, category: p.category, picture: p.picture?.data?.url || null })) });
       }
+      // Si échec, c'est peut-être un token Page → /me renvoie la page directement
+      const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,category&access_token=${accessToken}`);
+      const meData: any = await meRes.json();
+      if (meData?.id) {
+        return res.json({ success: true, pages: [{ id: meData.id, name: meData.name, category: meData.category || 'Page', picture: null }] });
+      }
+      res.status(400).json({ success: false, error: meData?.error?.message || 'Token invalide' });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -770,30 +776,32 @@ async function startServer() {
       if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
       const info: any = { type: 'unknown', id: null, name: null, permissions: [], pages: [], error: null };
 
-      // Essayer /me (marche pour les tokens User ET Page — sur la Page, /me renvoie la Page)
-      const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,permissions&access_token=${accessToken}`);
+      // /me sans permissions (marche User et Page)
+      const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${accessToken}`);
       const meData: any = await meRes.json();
-
       if (meData?.error) {
         info.error = meData.error.message;
+        return res.json({ success: true, info });
+      }
+      info.id = meData.id;
+      info.name = meData.name;
+
+      // /me/permissions (marche User uniquement)
+      const permRes = await fetch(`https://graph.facebook.com/v19.0/me/permissions?access_token=${accessToken}`);
+      const permData: any = await permRes.json();
+      if (permData?.data) {
+        info.permissions = permData.data.map((p: any) => ({ permission: p.permission, status: p.status }));
+      }
+
+      // /me/accounts (marche User uniquement)
+      const accRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
+      const accData: any = await accRes.json();
+      if (accData?.data) {
+        info.type = 'user';
+        info.pages = accData.data.map((p: any) => ({ id: p.id, name: p.name }));
       } else {
-        info.id = meData.id;
-        info.name = meData.name;
-        info.permissions = (meData.permissions?.data || []).map((p: any) => ({ permission: p.permission, status: p.status }));
-        // Essayer me/accounts pour déterminer si c'est un User token
-        const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
-        const accountsData: any = await accountsRes.json();
-        if (accountsData?.data) {
-          info.type = 'user';
-          info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
-        } else if (accountsData?.error?.code === 100) {
-          // "Tried accessing nonexisting field (accounts)" → c'est un token Page
-          info.type = 'page';
-          info.pages = [{ id: meData.id, name: meData.name }];
-        } else {
-          info.type = 'page';
-          info.pages = [{ id: meData.id, name: meData.name }];
-        }
+        info.type = 'page';
+        info.pages = [{ id: meData.id, name: meData.name }];
       }
       res.json({ success: true, info });
     } catch (err: any) {
