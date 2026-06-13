@@ -530,6 +530,7 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
             <button
               onClick={prevMonth}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all cursor-pointer text-slate-600 dark:text-slate-400"
+              aria-label="Précédent"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -539,6 +540,7 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
             <button
               onClick={nextMonth}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all cursor-pointer text-slate-600 dark:text-slate-400"
+              aria-label="Suivant"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -678,6 +680,7 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
                       <button
                         onClick={() => handleDelete(evt.id!)}
                         className="hover:text-rose-600 p-1 text-slate-400 dark:text-slate-500 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-1 text-[10px] cursor-pointer font-medium shrink-0"
+                        aria-label="Supprimer"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>

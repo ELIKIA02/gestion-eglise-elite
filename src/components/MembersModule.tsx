@@ -702,6 +702,7 @@ export default function MembersModule({ members, departments, loading, onRefresh
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Précédent"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -709,6 +710,7 @@ export default function MembersModule({ members, departments, loading, onRefresh
                     onClick={() => setPage(p => (p * pageSize < filteredMembers.length ? p + 1 : p))}
                     disabled={page * pageSize >= filteredMembers.length}
                     className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Suivant"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -810,11 +812,12 @@ export default function MembersModule({ members, departments, loading, onRefresh
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">Détails du Membre</h3>
                 <button
-                  onClick={() => setViewingMember(null)}
-                  className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                    onClick={() => setViewingMember(null)}
+                    className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all cursor-pointer"
+                    aria-label="Fermer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
               </div>
 
               <div className="space-y-4 text-sm">

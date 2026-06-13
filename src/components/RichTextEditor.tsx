@@ -173,7 +173,7 @@ export default function RichTextEditor({
         <div className="relative inline-block mt-1">
           <img src={imageBase64} alt="Aperçu" className="max-h-32 rounded-lg border border-slate-200" />
           <button type="button" onClick={onImageClear}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 cursor-pointer shadow">
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 cursor-pointer shadow" aria-label="Fermer">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>

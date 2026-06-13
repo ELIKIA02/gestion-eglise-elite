@@ -35,12 +35,12 @@ function syncToServer(data: Record<string, any[]>) {
     try {
       const ens = localStorage.getItem('church_enseignements');
       if (ens) payload['church_enseignements'] = JSON.parse(ens);
-    } catch {}
+    } catch (e) { console.error('[Sync] Failed to parse enseignements:', e); }
     fetch(`${getApiBase()}/api/data/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    }).catch(() => {});
+    }).catch((e) => console.error('[Sync] Failed to save to server:', e));
   }, 500);
 }
 
@@ -56,7 +56,7 @@ export async function loadFromServer(): Promise<boolean> {
       }
       return true;
     }
-  } catch {}
+  } catch (e) { console.error('[Firebase] loadFromServer failed:', e); }
   return false;
 }
 
@@ -92,7 +92,7 @@ let notifyTimer: any = null;
 function notifyListeners() {
   clearTimeout(notifyTimer);
   notifyTimer = setTimeout(() => {
-    listeners.forEach(fn => { try { fn(); } catch {} });
+    listeners.forEach(fn => { try { fn(); } catch (e) { console.error('[Firebase] Listener error:', e); } });
   }, 10);
 }
 
@@ -252,7 +252,7 @@ export function getPendingSyncCount(): number {
   try {
     const raw = localStorage.getItem(PENDING_SYNC_KEY);
     if (raw) return JSON.parse(raw).length;
-  } catch {}
+  } catch (e) { console.error('[Firebase] getPendingSyncCount failed:', e); }
   return 0;
 }
 
@@ -262,7 +262,7 @@ function queueOperation(op: PendingOperation) {
     const queue: PendingOperation[] = raw ? JSON.parse(raw) : [];
     queue.push(op);
     localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(queue));
-  } catch {}
+  } catch (e) { console.error('[Firebase] queueOperation failed:', e); }
 }
 
 async function replayQueue() {
@@ -287,10 +287,10 @@ async function replayQueue() {
           const ref: DocumentRef = { _type: 'document', path: `${op.collectionPath}/${op.docId}`, collectionPath: op.collectionPath, id: op.docId! };
           await deleteDoc(ref);
         }
-      } catch {}
+      } catch (e) { console.error('[Firebase] replay op failed:', e); }
     }
     localStorage.removeItem(PENDING_SYNC_KEY);
-  } catch {}
+  } catch (e) { console.error('[Firebase] replayQueue failed:', e); }
 }
 
 window.addEventListener('online', () => { replayQueue(); });

@@ -185,6 +185,7 @@ export default function PastoralVisitsModule({ members }: PastoralVisitsModulePr
                     type="button"
                     onClick={() => setFormData({ ...formData, memberSearch: '', memberId: '', memberName: '' })}
                     className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                    aria-label="Fermer"
                   >
                     <X className="w-3 h-3" />
                   </button>

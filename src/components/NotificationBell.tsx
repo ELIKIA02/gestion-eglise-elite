@@ -116,7 +116,7 @@ export default function NotificationBell({ notifications, onMarkRead, onMarkAllR
                     <CheckCheck className="w-4 h-4" /> Tout lu
                   </button>
                 )}
-                <button onClick={() => setIsOpen(false)} className="p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer">
+                <button onClick={() => setIsOpen(false)} className="p-2 rounded-xl hover:bg-slate-700/50 cursor-pointer" aria-label="Fermer">
                   <X className="w-6 h-6 text-slate-400" />
                 </button>
               </div>

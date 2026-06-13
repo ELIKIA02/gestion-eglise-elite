@@ -211,9 +211,9 @@ export default function LiturgicalThemesModule({ settings, members, onNavigate }
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b border-slate-100">
-          <button onClick={prevMonth} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all cursor-pointer text-slate-500"><ChevronLeft className="w-4 h-4" /></button>
+          <button onClick={prevMonth} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all cursor-pointer text-slate-500" aria-label="Précédent"><ChevronLeft className="w-4 h-4" /></button>
           <h3 className="text-sm font-bold text-slate-700 capitalize">{monthYear}</h3>
-          <button onClick={nextMonth} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all cursor-pointer text-slate-500"><ChevronRight className="w-4 h-4" /></button>
+          <button onClick={nextMonth} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all cursor-pointer text-slate-500" aria-label="Suivant"><ChevronRight className="w-4 h-4" /></button>
         </div>
         <div className="grid grid-cols-7 border-b border-slate-100">
           {weekdayHeaders.map(day => <div key={day} className="text-center text-[10px] font-semibold text-slate-400 py-2 uppercase tracking-wider">{day}</div>)}
@@ -291,7 +291,7 @@ export default function LiturgicalThemesModule({ settings, members, onNavigate }
           <div className="bg-white rounded-xl border border-slate-200 shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-800">{editingTheme ? 'Modifier le thème' : 'Nouveau thème liturgique'}</h3>
-              <button onClick={closeModal} className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer"><X className="w-4 h-4 text-slate-400" /></button>
+              <button onClick={closeModal} className="p-1 hover:bg-slate-100 rounded-lg cursor-pointer" aria-label="Fermer"><X className="w-4 h-4 text-slate-400" /></button>
             </div>
             <form onSubmit={handleSave} className="p-4 space-y-3">
               <div className="space-y-1">

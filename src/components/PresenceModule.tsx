@@ -249,11 +249,11 @@ export default function PresenceModule() {
         <>
           {/* Filter by month */}
           <div className="flex items-center justify-between">
-            <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Précédent">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className="font-semibold text-sm">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</span>
-            <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors" aria-label="Suivant">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -358,7 +358,7 @@ export default function PresenceModule() {
             <div className="p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-lg font-bold">Nouvelle séance</h3>
-                <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                <button onClick={() => setShowModal(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Fermer">
                   <X className="w-5 h-5" />
                 </button>
               </div>

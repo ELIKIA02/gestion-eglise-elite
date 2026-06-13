@@ -212,7 +212,7 @@ export default function UsersModule() {
                     placeholder="••••••••"
                     className="w-full pl-9 pr-10 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-900 dark:text-slate-100"
                   />
-                  <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+                  <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer" aria-label="Afficher ou masquer le mot de passe">
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -376,7 +376,7 @@ export default function UsersModule() {
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
                 {editingId ? "Modifier l'utilisateur" : 'Ajouter un utilisateur'}
               </h3>
-              <button onClick={resetForm} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all cursor-pointer">
+              <button onClick={resetForm} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all cursor-pointer" aria-label="Fermer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -426,7 +426,7 @@ export default function UsersModule() {
                     placeholder={editingId ? '•••••••• ou laisser vide' : '••••••••'}
                     className="w-full pl-9 pr-10 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-900 dark:text-slate-100"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer" aria-label="Afficher ou masquer le mot de passe">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

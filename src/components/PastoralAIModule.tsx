@@ -99,17 +99,17 @@ function loadSavedSeries(): { days: { day: number; text: string }[]; prompt: str
   try {
     const raw = localStorage.getItem(SERIES_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch (e) { console.error('[IA] loadSavedSeries failed:', e); return null; }
 }
 
 function saveSeriesToStorage(days: { day: number; text: string }[], prompt: string, theme: string) {
   try {
     localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify({ days, prompt, theme }));
-  } catch {}
+  } catch (e) { console.error('[IA] saveSeriesToStorage failed:', e); }
 }
 
 function clearSavedSeries() {
-  try { localStorage.removeItem(SERIES_STORAGE_KEY); } catch {}
+  try { localStorage.removeItem(SERIES_STORAGE_KEY); } catch (e) { console.error('[IA] clearSavedSeries failed:', e); }
 }
 
 export default function PastoralAIModule({ settings, members, transactions, events, onNavigate }: PastoralAIModuleProps) {
@@ -360,7 +360,7 @@ export default function PastoralAIModule({ settings, members, transactions, even
               if (data.done) {
                 setHistory(prev => [{ prompt: promptInput, response: fullText }, ...prev]);
               }
-            } catch { /* skip */ }
+            } catch (e) { console.error('[IA] Stream parse error:', e); }
           }
         }
       }

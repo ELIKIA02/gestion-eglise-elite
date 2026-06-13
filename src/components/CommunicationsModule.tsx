@@ -135,7 +135,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         setWaStatus('connecting');
         setWaQR(null);
       }
-    } catch {}
+    } catch (e) { console.error('[Comms] WhatsApp reset failed:', e); }
     setTimeout(() => setResetting(false), 3000);
   };
 
@@ -183,7 +183,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       const res = await fetch('/api/whatsapp/groups/refresh', { method: 'POST' });
       const data = await res.json();
       if (Array.isArray(data)) setWhatsappGroups(data);
-    } catch {}
+    } catch (e) { console.error('[Comms] Refresh groups failed:', e); }
   }, []);
 
   useEffect(() => {
@@ -199,7 +199,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         const data = await res.json();
         if (Array.isArray(data)) setScheduledMessages(data);
       }
-    } catch {}
+    } catch (e) { console.error('[Comms] Load scheduled failed:', e); }
   }, []);
 
   useEffect(() => {
@@ -439,7 +439,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         const data = await res.json();
         setPinnedGroups(data.pinned);
       }
-    } catch {}
+    } catch (e) { console.error('[Comms] Load pinned groups failed:', e); }
   };
 
   const sortedGroups = useMemo(() => {
@@ -491,7 +491,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       const data = await res.json();
       if (data.success) return data.photoId;
       return null;
-    } catch { return null; }
+    } catch (e) { console.error('[Comms] Upload image failed:', e); return null; }
   };
 
   const handleFbTest = async () => {
@@ -711,8 +711,8 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
             <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
               <Download className="w-5 h-5" /> Session WhatsApp exportée
             </div>
-            <button onClick={() => setExportedAuth(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-              <X className="w-4 h-4" />
+<button onClick={() => setExportedAuth(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="Fermer">
+               <X className="w-4 h-4" />
             </button>
           </div>
           <p className="text-[11px] text-slate-600">

@@ -190,7 +190,7 @@ Format Markdown professionnel, tableaux propres, chiffres en FCFA.`;
                 fullText += data.text;
                 setResponse(fullText);
               }
-            } catch { /* skip */ }
+            } catch (e) { console.error('[Audit] Stream parse:', e); }
           }
         }
       }

@@ -40,7 +40,7 @@ function loadAll(): Enseignement[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (e) { console.error('[Enseignement] loadAll failed:', e); return []; }
 }
 
 function saveAll(data: Enseignement[]) {
@@ -58,7 +58,7 @@ function importFromPastoralAI(): { days: { day: number; text: string }[]; theme:
       const data = JSON.parse(raw);
       if (data?.days?.length > 0) return data;
     }
-  } catch {}
+  } catch (e) { console.error('[Enseignement] importFromPastoralAI failed:', e); }
   return null;
 }
 

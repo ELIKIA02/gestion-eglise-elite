@@ -31,7 +31,7 @@ export default function AnnualReportModule({ members, transactions, events, sett
       if (!raw) return [];
       const all = JSON.parse(raw);
       return all['church_sacraments'] || [];
-    } catch { return []; }
+    } catch (e) { console.error('[AnnualReport] Load sacraments failed:', e); return []; }
   }, []);
 
   const stats = useMemo(() => {

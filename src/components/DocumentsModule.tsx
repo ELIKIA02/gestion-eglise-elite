@@ -1201,7 +1201,7 @@ async function submitForm(){
                       <button onClick={() => moveLigne(i, -1)} disabled={i === 0} className="p-1 rounded hover:bg-slate-100 cursor-pointer disabled:opacity-30"><MoveUp className="w-3 h-3" /></button>
                       <button onClick={() => moveLigne(i, 1)} disabled={i === lignes.length - 1} className="p-1 rounded hover:bg-slate-100 cursor-pointer disabled:opacity-30"><MoveDown className="w-3 h-3" /></button>
                     </div>
-                    <button onClick={() => removeLigne(l.id)} className="p-1 rounded hover:bg-red-50 cursor-pointer"><Trash2 className="w-3 h-3 text-red-400" /></button>
+                    <button onClick={() => removeLigne(l.id)} className="p-1 rounded hover:bg-red-50 cursor-pointer" aria-label="Supprimer"><Trash2 className="w-3 h-3 text-red-400" /></button>
                   </div>
                 ))}
                 <div className="text-right text-sm font-bold text-indigo-600 pt-1">{formatNumber(totalDevis)} FCFA</div>

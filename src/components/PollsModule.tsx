@@ -223,7 +223,7 @@ export default function PollsModule({ members }: PollsModuleProps) {
                     className="flex-1 text-xs p-2 border border-slate-200 rounded-md focus:outline-indigo-600" />
                   {options.length > 2 && (
                     <button type="button" onClick={() => handleRemoveOption(opt.id)}
-                      className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer">
+                      className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer" aria-label="Fermer">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
