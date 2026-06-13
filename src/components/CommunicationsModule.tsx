@@ -89,6 +89,8 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'facebook'>('messagerie');
 
   const [fbMessage, setFbMessage] = useState('');
+  const [fbArticleTitle, setFbArticleTitle] = useState('');
+  const [fbArticleSubtitle, setFbArticleSubtitle] = useState('');
   const [fbPageId, setFbPageId] = useState('');
   const [fbPages, setFbPages] = useState<any[]>([]);
   const [fbScheduleMode, setFbScheduleMode] = useState(false);
@@ -526,14 +528,16 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   };
 
   const handleFbSendToWhatsApp = async () => {
-    if (!fbMessage.trim() || !fbWaGroupId) return;
+    if ((!fbMessage.trim() && !fbArticleTitle.trim()) || !fbWaGroupId) return;
     const token = settings?.facebookToken;
     if (!token) { setFbResult('❌ Token Facebook non configuré'); return; }
     if (waStatus !== 'connected') { setFbResult('❌ WhatsApp non connecté'); return; }
     setFbWaSending(true);
     setFbResult(null);
     try {
-      const cleanText = formatForFacebook(fbMessage);
+      const cleanText = fbPostType === 'article'
+        ? `*${fbArticleTitle.toUpperCase()}*\n${fbArticleSubtitle ? `_${fbArticleSubtitle}_\n\n` : ''}${formatForFacebook(fbMessage)}`
+        : formatForFacebook(fbMessage);
       let imageBase64: string | undefined;
       if (fbImages.length > 0) {
         const reader = new FileReader();
@@ -556,7 +560,10 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   };
 
   const handleFbPublish = async () => {
-    if (!fbMessage.trim() || !fbPageId) return;
+    const finalMessage = fbPostType === 'article'
+      ? `${fbArticleTitle.toUpperCase()}${fbArticleSubtitle ? `\n\n${fbArticleSubtitle}` : ''}\n\n${fbMessage}`
+      : fbMessage;
+    if (!finalMessage.trim() || !fbPageId) return;
     setFbSending(true);
     setFbResult(null);
     const token = settings?.facebookToken;
@@ -574,7 +581,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         }
       }
 
-      const cleanMessage = formatForFacebook(fbMessage);
+      const cleanMessage = formatForFacebook(finalMessage);
       const res = await fetch('/api/facebook/post-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -592,6 +599,8 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
           ? '✅ Article programmé avec succès'
           : '✅ Publié sur Facebook avec succès');
         setFbMessage('');
+        setFbArticleTitle('');
+        setFbArticleSubtitle('');
         setFbImages([]);
         setFbUploadedCount(0);
       } else {
@@ -1122,10 +1131,20 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                 </button>
               </div>
 
+              {fbPostType === 'article' && (
+                <>
+                  <input type="text" value={fbArticleTitle} onChange={e => setFbArticleTitle(e.target.value)}
+                    placeholder="Titre de l'article"
+                    className="w-full text-sm font-bold p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
+                  <input type="text" value={fbArticleSubtitle} onChange={e => setFbArticleSubtitle(e.target.value)}
+                    placeholder="Sous-titre (optionnel)"
+                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-500 dark:text-slate-400" />
+                </>
+              )}
               <FbWysiwygEditor
                 value={fbMessage}
                 onChange={setFbMessage}
-                label={fbPostType === 'article' ? 'Message de l\'article' : 'Message'}
+                label={fbPostType === 'article' ? 'Corps de l\'article' : 'Message'}
                 placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
               />
 
@@ -1206,7 +1225,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               </div>
 
               {/* Prévisualisation */}
-              {fbMessage.trim() && (
+              {(fbMessage.trim() || fbArticleTitle.trim()) && (
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
                   <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2 tracking-wide">Aperçu</p>
                   <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden max-w-md mx-auto shadow-sm">
@@ -1224,8 +1243,10 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                         ))}
                       </div>
                     )}
-                    <div className="p-3">
-                      <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap line-clamp-4 leading-relaxed">{fbMessage}</p>
+                    <div className="p-3 space-y-1">
+                      {fbArticleTitle && <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{fbArticleTitle}</p>}
+                      {fbArticleSubtitle && <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">{fbArticleSubtitle}</p>}
+                      {fbMessage && <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap line-clamp-4 leading-relaxed">{fbMessage}</p>}
                       <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
                         <Globe className="w-3 h-3" />
                         <span>{fbPages.find(p => p.id === fbPageId)?.name || 'Page'} • {fbScheduleMode && fbScheduledAt ? new Date(fbScheduledAt).toLocaleString('fr') : 'Publication immédiate'}</span>
@@ -1259,7 +1280,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                   {fbTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                   Tester la publication
                 </button>
-                <button onClick={handleFbPublish} disabled={fbSending || !fbMessage.trim() || !fbPageId}
+                <button onClick={handleFbPublish} disabled={fbSending || (!fbMessage.trim() && !fbArticleTitle.trim()) || !fbPageId}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border border-blue-500 shadow-xs">
                   {fbSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
                   {fbSending ? 'Publication en cours...' : fbScheduleMode ? 'Programmer l\'article' : 'Publier maintenant'}
