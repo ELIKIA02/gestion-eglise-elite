@@ -14,6 +14,49 @@ interface RichTextEditorProps {
   onImageClear?: () => void;
 }
 
+// --- Unicode conversion helpers pour Facebook ---
+const FB_BOLD_OFFSET = 0x1D3BF; // A → 𝐀 (U+0041 → U+1D400)
+const FB_ITALIC_OFFSET = 0x1D3F3; // A → 𝐴 (U+0041 → U+1D434)
+const FB_BOLD_ITALIC_OFFSET = 0x1D427; // A → 𝑨 (U+0041 → U+1D468)
+const FB_MONO_OFFSET = 0x1D62F; // A → 𝙰 (U+0041 → U+1D670)
+const FB_BOLD_NUM_OFFSET = 0x1D79E; // 0 → 𝟎 (U+0030 → U+1D7CE)
+const FB_STRIKE_CHAR = '\u0336'; // Combining long stroke overlay
+
+function isAlpha(c: string): boolean {
+  const code = c.charCodeAt(0);
+  return (code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A);
+}
+
+function isDigit(c: string): boolean {
+  const code = c.charCodeAt(0);
+  return code >= 0x30 && code <= 0x39;
+}
+
+function applyUnicode(text: string, offset: number, includeDigits: boolean): string {
+  return text.split('').map(c => {
+    const code = c.charCodeAt(0);
+    if (code >= 0x41 && code <= 0x5A) return String.fromCharCode(code + offset);
+    if (code >= 0x61 && code <= 0x7A) return String.fromCharCode(code + offset);
+    if (includeDigits && code >= 0x30 && code <= 0x39) return String.fromCharCode(code + FB_BOLD_NUM_OFFSET);
+    return c;
+  }).join('');
+}
+
+function toFbBold(text: string): string { return applyUnicode(text, FB_BOLD_OFFSET, true); }
+function toFbItalic(text: string): string { return applyUnicode(text, FB_ITALIC_OFFSET, false); }
+function toFbBoldItalic(text: string): string { return applyUnicode(text, FB_BOLD_ITALIC_OFFSET, false); }
+function toFbMono(text: string): string { return applyUnicode(text, FB_MONO_OFFSET, true); }
+function toFbStrike(text: string): string { return text.split('').map(c => c + FB_STRIKE_CHAR).join(''); }
+function toFbBoldUppercase(text: string): string { return applyUnicode(text.toUpperCase(), FB_BOLD_OFFSET, true); }
+
+// --- WhatsApp conversion helpers ---
+function toWaBold(text: string): string { return `*${text}*`; }
+function toWaItalic(text: string): string { return `_${text}_`; }
+function toWaBoldItalic(text: string): string { return `*_${text}_*`; }
+function toWaStrike(text: string): string { return `~${text}~`; }
+function toWaMono(text: string): string { return `\`\`\`${text}\`\`\``; }
+function toWaBoldUppercase(text: string): string { return `*${text.toUpperCase()}*`; }
+
 export function stripWhatsAppFormatting(text: string): string {
   return text
     .replace(/\*_(.+?)_\*/g, '$1')
@@ -30,27 +73,13 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const formatText = (before: string, after: string) => {
+  const applyToSelection = (transform: (text: string) => string) => {
     const ta = textRef.current;
     if (!ta) return;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
-    const selected = value.substring(start, end);
-    const newText = value.substring(0, start) + before + selected + after + value.substring(end);
-    onChange(newText);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    });
-  };
-
-  const transformSelection = (transform: (text: string) => string) => {
-    const ta = textRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    if (start === end) return;
-    const selected = value.substring(start, end);
+    if (start === end && target === 'facebook') return;
+    const selected = start === end && target === 'whatsapp' ? '' : value.substring(start, end);
     const transformed = transform(selected);
     onChange(value.substring(0, start) + transformed + value.substring(end));
     requestAnimationFrame(() => {
@@ -58,6 +87,13 @@ export default function RichTextEditor({
       ta.setSelectionRange(start, start + transformed.length);
     });
   };
+
+  const toUpper = (t: string) => t.toUpperCase();
+  const toLower = (t: string) => t.toLowerCase();
+
+  const formatActions: Record<string, (text: string) => string> = target === 'facebook'
+    ? { bold: toFbBold, italic: toFbItalic, boldItalic: toFbBoldItalic, strike: toFbStrike, mono: toFbMono, boldUpper: toFbBoldUppercase }
+    : { bold: toWaBold, italic: toWaItalic, boldItalic: toWaBoldItalic, strike: toWaStrike, mono: toWaMono, boldUpper: toWaBoldUppercase };
 
   return (
     <div className="space-y-1">
@@ -68,23 +104,23 @@ export default function RichTextEditor({
         </div>
       )}
       <div className="flex gap-1 pb-1 flex-wrap">
-        <button type="button" onClick={() => formatText('*', '*')} title="Gras"
+        <button type="button" onClick={() => applyToSelection(formatActions.bold)} title="Gras"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
-        <button type="button" onClick={() => formatText('_', '_')} title="Italique"
+        <button type="button" onClick={() => applyToSelection(formatActions.italic)} title="Italique"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
-        <button type="button" onClick={() => formatText('*_', '_*')} title="Gras-italique"
+        <button type="button" onClick={() => applyToSelection(formatActions.boldItalic)} title="Gras-italique"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><TypeIcon className="w-3.5 h-3.5" /></button>
         <span className="w-px bg-slate-200 mx-0.5 self-stretch" />
-        <button type="button" onClick={() => transformSelection(t => t.toUpperCase())} title="Majuscule"
+        <button type="button" onClick={() => applyToSelection(toUpper)} title="Majuscule"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2">A<ArrowUp className="w-3 h-3 inline" /></button>
-        <button type="button" onClick={() => transformSelection(t => t.toLowerCase())} title="Minuscule"
+        <button type="button" onClick={() => applyToSelection(toLower)} title="Minuscule"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer text-[10px] leading-none px-2">a<ArrowDown className="w-3 h-3 inline" /></button>
-        <button type="button" onClick={() => transformSelection(t => `*${t.toUpperCase()}*`)} title="Majuscule gras"
+        <button type="button" onClick={() => applyToSelection(formatActions.boldUpper)} title="Majuscule gras"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2"><Bold className="w-3 h-3 inline" />A<ArrowUp className="w-3 h-3 inline" /></button>
         <span className="w-px bg-slate-200 mx-0.5 self-stretch" />
-        <button type="button" onClick={() => formatText('~', '~')} title="Barré"
+        <button type="button" onClick={() => applyToSelection(formatActions.strike)} title="Barré"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
-        <button type="button" onClick={() => formatText('```', '```')} title="Monospace"
+        <button type="button" onClick={() => applyToSelection(formatActions.mono)} title="Monospace"
           className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Code className="w-3.5 h-3.5" /></button>
         {showImageUpload && (
           <>
@@ -109,8 +145,8 @@ export default function RichTextEditor({
         </div>
       )}
       {target === 'facebook' && value.trim() && (
-        <div className="text-[10px] text-slate-400 italic border-t border-slate-100 dark:border-slate-700 pt-1 mt-1">
-          Aperçu Facebook propre : {stripWhatsAppFormatting(value).slice(0, 120)}{stripWhatsAppFormatting(value).length > 120 ? '...' : ''}
+        <div className="text-[10px] text-slate-400 italic border-t border-slate-100 dark:border-slate-700 pt-1.5 mt-1 leading-relaxed">
+          Aperçu Facebook : {stripWhatsAppFormatting(value).slice(0, 200)}{stripWhatsAppFormatting(value).length > 200 ? '...' : ''}
         </div>
       )}
     </div>
