@@ -561,7 +561,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
 
   const handleFbPublish = async () => {
     const finalMessage = fbPostType === 'article'
-      ? `${fbArticleTitle.toUpperCase()}${fbArticleSubtitle ? `\n\n${fbArticleSubtitle}` : ''}\n\n${fbMessage}`
+      ? `${fbArticleTitle.toUpperCase()}${fbArticleSubtitle ? `\n\n${fbArticleSubtitle}` : ''}${fbMessage ? `\n\n${fbMessage}` : ''}`
       : fbMessage;
     if (!finalMessage.trim() || !fbPageId) return;
     setFbSending(true);
