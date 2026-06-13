@@ -768,28 +768,31 @@ async function startServer() {
     try {
       const { accessToken } = req.body;
       if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
+      const info: any = { type: 'unknown', id: null, name: null, permissions: [], pages: [], error: null };
+
+      // Essayer /me (marche pour les tokens User ET Page — sur la Page, /me renvoie la Page)
       const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,permissions&access_token=${accessToken}`);
       const meData: any = await meRes.json();
-      const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
-      const accountsData: any = await accountsRes.json();
-      const info: any = { type: 'unknown', id: meData?.id, name: meData?.name, permissions: [], pages: [], error: null };
 
       if (meData?.error) {
         info.error = meData.error.message;
-        // Peut-être un token Page qui ne supporte pas /me
-        if (accountsData?.data) {
-          info.type = 'page';
-          info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
-        }
       } else {
         info.id = meData.id;
         info.name = meData.name;
         info.permissions = (meData.permissions?.data || []).map((p: any) => ({ permission: p.permission, status: p.status }));
-        // Token Page si name correspond à une page ET pas de user profile
-        const isPageName = accountsData?.data?.some((p: any) => p.name === meData.name);
-        info.type = (isPageName || meData.id?.startsWith?.('1')) ? 'page' : 'user';
+        // Essayer me/accounts pour déterminer si c'est un User token
+        const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
+        const accountsData: any = await accountsRes.json();
         if (accountsData?.data) {
+          info.type = 'user';
           info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
+        } else if (accountsData?.error?.code === 100) {
+          // "Tried accessing nonexisting field (accounts)" → c'est un token Page
+          info.type = 'page';
+          info.pages = [{ id: meData.id, name: meData.name }];
+        } else {
+          info.type = 'page';
+          info.pages = [{ id: meData.id, name: meData.name }];
         }
       }
       res.json({ success: true, info });
