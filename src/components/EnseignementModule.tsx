@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send, FileDown, Globe } from 'lucide-react';
 import { Enseignement, EnseignementDay, Member } from '../types';
-import { whatsAppToFacebook } from './RichTextEditor';
+import { formatForFacebook } from './RichTextEditor';
 
 function markdownToHtml(md: string): string {
   if (!md) return '';
@@ -277,16 +277,15 @@ export default function EnseignementModule({ settings, members, departments }: E
     try {
       if (fbPublishMode === 'single') {
         const allText = editDays.map(d =>
-          `📖 *${d.title}*\n\n${d.text}`
+          `📖 ${d.title.toUpperCase()}\n\n${formatForFacebook(d.text)}`
         ).join('\n\n━━━━━━━━━━━━━━━\n\n');
-        const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n${allText}`;
-        const cleanMessage = whatsAppToFacebook(message);
+        const message = `${editTitle.toUpperCase()}${editTheme ? ` — ${editTheme.toUpperCase()}` : ''}\n\n${allText}`;
         const imageUrls = editDays.map(d => d.imageUrl).filter(Boolean) as string[];
         const res = await fetch('/api/facebook/post-article', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pageId: fbPageId, message: cleanMessage, imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+            pageId: fbPageId, message, imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
             accessToken: token,
             scheduledTime: fbScheduleMode && fbScheduledAt ? fbScheduledAt : undefined,
           }),
@@ -297,8 +296,7 @@ export default function EnseignementModule({ settings, members, departments }: E
         let ok = 0, fail = 0;
         for (let i = 0; i < editDays.length; i++) {
           const d = editDays[i];
-          const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n📖 ${d.title}\n\n${d.text}`;
-          const cleanMessage = whatsAppToFacebook(message);
+          const message = `${editTitle.toUpperCase()}${editTheme ? ` — ${editTheme.toUpperCase()}` : ''}\n\n📖 ${d.title.toUpperCase()}\n\n${formatForFacebook(d.text)}`;
           const dayDate = fbScheduleMode && fbScheduledAt
             ? new Date(new Date(fbScheduledAt).getTime() + i * 86400000).toISOString()
             : undefined;
@@ -306,7 +304,7 @@ export default function EnseignementModule({ settings, members, departments }: E
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pageId: fbPageId, message: cleanMessage,
+              pageId: fbPageId, message,
               imageUrls: d.imageUrl ? [d.imageUrl] : undefined,
               accessToken: token,
               scheduledTime: dayDate,
