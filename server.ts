@@ -715,7 +715,7 @@ async function startServer() {
       }
 
       if (allPhotoIds.length > 0) {
-        body.attached_media = JSON.stringify(buildAttachedMedia(allPhotoIds));
+        body.attached_media = buildAttachedMedia(allPhotoIds);
       }
 
       // Mode programmé
