@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { collection, addDoc, deleteDoc, doc, db, handleFirestoreError, OperationType } from '../firebase';
 import { ChurchEvent, EventType, ChurchSettings } from '../types';
-import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, ClipboardList, Trash2, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, ClipboardList, Trash2, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, CalendarDays } from 'lucide-react';
 import { generateGoogleCalendarUrl, generateOutlookCalendarUrl } from '../utils/calendar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ServicePlanningModule from './ServicePlanningModule';
 
 interface EventsModuleProps {
   events: ChurchEvent[];
@@ -18,6 +19,7 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [cultesSubTab, setCultesSubTab] = useState<'activites' | 'planning'>('activites');
 
   // Dynamically compute worship options from settings
   const worshipCategories = useMemo(() => {
@@ -308,6 +310,25 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
           </div>
         </div>
       )}
+
+      {/* Cultes sub-tabs */}
+      <div className="border-b border-slate-200 dark:border-slate-600 flex gap-4 text-xs font-bold overflow-x-auto shrink-0 pb-0.5">
+        <button onClick={() => setCultesSubTab('activites')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            cultesSubTab === 'activites' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <Sparkles className="w-3.5 h-3.5" /> Activités
+        </button>
+        <button onClick={() => setCultesSubTab('planning')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            cultesSubTab === 'planning' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <CalendarDays className="w-3.5 h-3.5" /> Planning
+        </button>
+      </div>
+
+      {cultesSubTab === 'activites' ? (
+        <>
 
       {isAdding && (
         <form onSubmit={handleCreate} className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm space-y-4">
@@ -763,6 +784,10 @@ export default function EventsModule({ events, loading, onRefresh, settings }: E
             </div>
           )}
         </div>
+      )}
+        </>
+      ) : (
+        <ServicePlanningModule />
       )}
     </div>
   );

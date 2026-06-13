@@ -13,23 +13,15 @@ import ChurchReportModule from './components/ChurchReportModule';
 import DepartmentsModule from './components/DepartmentsModule';
 import ReportsModule from './components/ReportsModule';
 import SettingsModule from './components/SettingsModule';
-import EnseignementModule from './components/EnseignementModule';
-import DocumentsModule from './components/DocumentsModule';
 import UsersModule from './components/UsersModule';
-import LiturgicalThemesModule from './components/LiturgicalThemesModule';
-import PresenceModule from './components/PresenceModule';
-import AnniversariesModule from './components/AnniversariesModule';
-import TithesModule from './components/TithesModule';
-import PastoralVisitsModule from './components/PastoralVisitsModule';
-import PollsModule from './components/PollsModule';
 import SacramentsModule from './components/SacramentsModule';
-import AnnualReportModule from './components/AnnualReportModule';
-import ServicePlanningModule from './components/ServicePlanningModule';
-import LibraryModule from './components/LibraryModule';
+import RessourcesModule from './components/RessourcesModule';
+import PresenceModule from './components/PresenceModule';
+import LiturgicalThemesModule from './components/LiturgicalThemesModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Bookmark, UserCheck, Gift, HandCoins, HeartHandshake, Vote, Church, Library } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Church, UserCheck, Bookmark } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -270,25 +262,17 @@ export default function App() {
     { id: 'dashboard', label: 'Tableau de Bord', icon: LayoutDashboard },
     { id: 'members', label: 'Membres', icon: Users, count: members.length },
     { id: 'departments', label: 'Départements', icon: Building2, count: departments.length },
-    { id: 'finances', label: 'Trésorerie', icon: CreditCard },
-    { id: 'cultes', label: 'Cultes & Activités', icon: CalendarDays },
-    { id: 'serviceplanning', label: 'Planning Cultes', icon: CalendarDays },
+    { id: 'finances', label: 'Finances', icon: CreditCard },
+    { id: 'cultes', label: 'Cultes', icon: CalendarDays },
     { id: 'presence', label: 'Présence', icon: UserCheck },
     { id: 'comms', label: 'Communications', icon: MessageSquareText },
-    { id: 'anniversaries', label: 'Anniversaires', icon: Gift },
-    { id: 'tithes', label: 'Dîmes par Membre', icon: HandCoins },
-    { id: 'visits', label: 'Visites Pastorales', icon: HeartHandshake },
-    { id: 'polls', label: 'Sondages WhatsApp', icon: Vote },
+    { id: 'ressources', label: 'Ressources', icon: BookOpen },
     { id: 'sacraments', label: 'Registre', icon: Church },
-    { id: 'library', label: 'Bibliothèque', icon: Library },
-    { id: 'rapport', label: 'Rapport Annuel', icon: FileBarChart2 },
     { id: 'ia', label: 'Assistant IA', icon: Sparkles },
-    { id: 'enseignement', label: 'Enseignement', icon: BookOpen },
     { id: 'liturgical', label: 'Thèmes Liturgiques', icon: Bookmark },
-    { id: 'documents', label: 'Documents', icon: FileText },
     { id: 'users', label: 'Utilisateurs', icon: Shield },
     { id: 'audit', label: 'Audit Église', icon: ClipboardCheck },
-    { id: 'reports', label: 'Rapports & Exports', icon: FileBarChart2 },
+    { id: 'reports', label: 'Rapports', icon: FileBarChart2 },
     { id: 'settings', label: 'Paramètres', icon: Settings },
   ];
 
@@ -404,14 +388,14 @@ export default function App() {
               onRefreshAll={() => {}} onNavigate={(tab) => setActiveTab(tab)} />
           )}
           {activeTab === 'members' && (
-            <MembersModule members={members} departments={departments} loading={loadingMembers} onRefresh={() => {}} />
+            <MembersModule members={members} departments={departments} loading={loadingMembers} onRefresh={() => {}} settings={settings} />
           )}
           {activeTab === 'departments' && (
             <DepartmentsModule departments={departments} members={members} loading={loadingDepartments}
               onRefresh={() => {}} onMessage={(deptName) => { setPresetTarget(deptName); setActiveTab('comms'); }} />
           )}
           {activeTab === 'finances' && (
-            <FinanceModule transactions={transactions} events={events} loading={loadingFinances} onRefresh={() => {}} />
+            <FinanceModule transactions={transactions} events={events} loading={loadingFinances} onRefresh={() => {}} members={members} />
           )}
           {activeTab === 'cultes' && (
             <EventsModule events={events} loading={loadingEvents} onRefresh={() => {}} settings={settings} />
@@ -423,17 +407,17 @@ export default function App() {
             <CommunicationsModule comms={comms} members={members} departments={departments}
               settings={settings} loading={loadingComms} onRefresh={() => {}} presetTarget={presetTarget} presetText={presetMessageText} onConsumePresetText={() => setPresetMessageText(undefined)} />
           )}
+          {activeTab === 'ressources' && (
+            <RessourcesModule members={members} settings={settings} departments={departments} />
+          )}
+          {activeTab === 'sacraments' && (
+            <SacramentsModule members={members} settings={settings} />
+          )}
           {activeTab === 'ia' && (
             <PastoralAIModule settings={settings} members={members} transactions={transactions} events={events} onNavigate={handleNavigate} />
           )}
-          {activeTab === 'enseignement' && (
-            <EnseignementModule settings={settings} members={members} departments={departments} />
-          )}
           {activeTab === 'liturgical' && (
             <LiturgicalThemesModule settings={settings} members={members} onNavigate={handleNavigate} />
-          )}
-          {activeTab === 'documents' && (
-            <DocumentsModule settings={settings} members={members} />
           )}
           {activeTab === 'users' && (
             <UsersModule />
@@ -443,30 +427,6 @@ export default function App() {
           )}
           {activeTab === 'reports' && (
             <ReportsModule transactions={transactions} events={events} members={members} settings={settings} />
-          )}
-          {activeTab === 'anniversaries' && (
-            <AnniversariesModule members={members} settings={settings} />
-          )}
-          {activeTab === 'tithes' && (
-            <TithesModule members={members} />
-          )}
-          {activeTab === 'visits' && (
-            <PastoralVisitsModule members={members} />
-          )}
-          {activeTab === 'polls' && (
-            <PollsModule members={members} />
-          )}
-          {activeTab === 'sacraments' && (
-            <SacramentsModule members={members} settings={settings} />
-          )}
-          {activeTab === 'library' && (
-            <LibraryModule members={members} />
-          )}
-          {activeTab === 'rapport' && (
-            <AnnualReportModule members={members} transactions={transactions} events={events} settings={settings} />
-          )}
-          {activeTab === 'serviceplanning' && (
-            <ServicePlanningModule />
           )}
           {activeTab === 'settings' && (
             <SettingsModule settings={settings} loading={loadingSettings} onRefresh={() => {}} />

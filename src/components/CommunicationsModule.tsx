@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download, FileText } from 'lucide-react';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download, FileText, Vote } from 'lucide-react';
+import PollsModule from './PollsModule';
 
 interface ScheduledMessage {
   id: string;
@@ -84,6 +85,8 @@ const [resetting, setResetting] = useState(false);
 const [qrVersion, setQrVersion] = useState(0);
 const [exportedAuth, setExportedAuth] = useState<string | null>(null);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages'>('messagerie');
 
   // Bump QR version when new QR arrives to force image refresh
   useEffect(() => {
@@ -604,6 +607,24 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
         </div>
       </div>
 
+      {/* Comms sub-tabs */}
+      <div className="border-b border-slate-200 dark:border-slate-600 flex gap-4 text-xs font-bold overflow-x-auto shrink-0 pb-0.5 mb-4">
+        <button onClick={() => setCommsSubTab('messagerie')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            commsSubTab === 'messagerie' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <Send className="w-3.5 h-3.5" /> Messagerie
+        </button>
+        <button onClick={() => setCommsSubTab('sondages')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            commsSubTab === 'sondages' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <Vote className="w-3.5 h-3.5" /> Sondages
+        </button>
+      </div>
+
+      {commsSubTab === 'messagerie' ? (
+        <>
       <div className="flex gap-4 border-b border-slate-200 text-sm font-medium">
         <button onClick={() => setActiveTab('send')}
           className={`pb-2 px-1 cursor-pointer ${activeTab === 'send' ? 'border-b-2 border-indigo-600 text-indigo-600 font-semibold' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -943,6 +964,10 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
           )}
         </div>
       )}
+      </>
+    ) : (
+      <PollsModule members={members} />
+    )}
     </div>
   );
 }

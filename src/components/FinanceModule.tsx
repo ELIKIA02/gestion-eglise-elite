@@ -22,12 +22,16 @@ import {
   CheckCircle2, 
   ArrowRightLeft 
 } from 'lucide-react';
+import { HandCoins } from 'lucide-react';
+import TithesModule from './TithesModule';
+import { Member } from '../types';
 
 interface FinanceModuleProps {
   transactions: FinanceTransaction[];
   events: ChurchEvent[];
   loading: boolean;
   onRefresh: () => void;
+  members: Member[];
 }
 
 // Highly localized French Congolese Church context categories
@@ -59,8 +63,9 @@ const formatFCFA = (amount: number) => {
   return Math.round(amount).toLocaleString('fr-FR') + ' FCFA';
 };
 
-export default function FinanceModule({ transactions, events, loading, onRefresh }: FinanceModuleProps) {
+export default function FinanceModule({ transactions, events, loading, onRefresh, members }: FinanceModuleProps) {
   const [activeTab, setActiveTab] = useState<'transactions' | 'analytics' | 'basketAssistant' | 'budget' | 'bilan' | 'journal' | 'grandlivre'>('transactions');
+  const [financeSubTab, setFinanceSubTab] = useState<'tresorerie' | 'dimes'>('tresorerie');
   const [isAdding, setIsAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -511,6 +516,24 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
         </div>
       </div>
 
+      {/* Finance sub-tabs */}
+      <div className="border-b border-slate-200 dark:border-slate-600 flex gap-4 text-xs font-bold overflow-x-auto shrink-0 pb-0.5">
+        <button onClick={() => setFinanceSubTab('tresorerie')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            financeSubTab === 'tresorerie' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <Coins className="w-3.5 h-3.5" /> Trésorerie
+        </button>
+        <button onClick={() => setFinanceSubTab('dimes')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            financeSubTab === 'dimes' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <HandCoins className="w-3.5 h-3.5" /> Dîmes par Membre
+        </button>
+      </div>
+
+      {financeSubTab === 'tresorerie' ? (
+      <>
       {/* Success Notification Alert */}
       {successMsg && (
         <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-250 dark:border-emerald-800 p-3 rounded-lg flex items-center gap-3 text-xs text-emerald-800 dark:text-emerald-300 animate-fade-in shadow-3xs font-medium">
@@ -1666,6 +1689,10 @@ export default function FinanceModule({ transactions, events, loading, onRefresh
           </p>
         </div>
       </div>
+      </>
+      ) : (
+      <TithesModule members={members} />
+      )}
 
     </div>
   );
