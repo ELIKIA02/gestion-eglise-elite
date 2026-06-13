@@ -785,6 +785,12 @@ async function startServer() {
       const feedRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed?limit=1&access_token=${accessToken}`);
       const feedData: any = await feedRes.json();
       results.canReadFeed = !feedData.error;
+      results.feedReadDetail = feedData.error ? feedData.error.message : 'OK';
+      // Essayer aussi /feed avec un GET via /{page-id}/published_posts
+      const pubRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/published_posts?limit=1&access_token=${accessToken}`);
+      const pubData: any = await pubRes.json();
+      results.canReadPublishedPosts = !pubData.error;
+      results.pubPostsDetail = pubData.error ? pubData.error.message : 'OK';
 
       // 3) Essayer de publier
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
@@ -801,7 +807,12 @@ async function startServer() {
         results.publishError = postData.error?.message;
       }
 
-      // 4) Résumé
+      // 4) Debug token officiel
+      const debugRes = await fetch(`https://graph.facebook.com/v19.0/debug_token?input_token=${accessToken}&access_token=${accessToken}`);
+      const debugData: any = await debugRes.json();
+      results.debugToken = debugData;
+
+      // 5) Résumé
       const perms = [];
       if (results.canReadFeed) perms.push('pages_read_engagement');
       if (results.canPublish) perms.push('pages_manage_posts');
