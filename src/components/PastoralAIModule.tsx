@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Sparkles, BookOpen, MessageSquare, Heart, Copy, Printer, Loader2, Download, History, Send, Users, DollarSign, Calendar, FileText, FileDown, Sun, CheckSquare, Square, Clock } from 'lucide-react';
+import { Sparkles, BookOpen, MessageSquare, Heart, Copy, Printer, Loader2, Download, History, Send, Users, DollarSign, Calendar, FileText, FileDown, Sun, CheckSquare, Square, Clock, Bookmark } from 'lucide-react';
 import { ChurchSettings, Member, FinanceTransaction, ChurchEvent } from '../types';
 
 interface PastoralAIModuleProps {
@@ -11,7 +11,7 @@ interface PastoralAIModuleProps {
   onNavigate: (tab: string, text?: string) => void;
 }
 
-type AiMode = 'sermon' | 'sms' | 'advice' | 'event' | 'bible-study' | 'exhortation';
+type AiMode = 'sermon' | 'sms' | 'advice' | 'event' | 'bible-study' | 'exhortation' | 'reference';
 type SmsTone = 'fervent' | 'formel' | 'urgent';
 
 const MODE_CONFIG: Record<AiMode, { label: string; icon: React.ElementType; placeholder: string; systemPrompt: string }> = {
@@ -44,6 +44,12 @@ const MODE_CONFIG: Record<AiMode, { label: string; icon: React.ElementType; plac
     icon: Sparkles,
     placeholder: 'Livre, chapitre, thème d\'étude...',
     systemPrompt: "Tu es un enseignant de la Bible pédagogue. Crée une étude biblique structurée en français : versets, contexte historique, questions de réflexion, application pratique, prière. Utilise le Markdown."
+  },
+  reference: {
+    label: 'Référence Biblique',
+    icon: Bookmark,
+    placeholder: '',
+    systemPrompt: ""
   },
   exhortation: {
     label: 'Exhortation',
@@ -83,7 +89,8 @@ const SUGGESTED_PROMPTS: Record<AiMode, string[]> = {
     "Thème : L'espérance qui ne déçoit pas. Série de 7 jours sur la confiance en Dieu.",
     "Thème : Marcher par la foi et non par la vue. Quotidien avec des versets clés.",
     "Thème : La paix intérieure dans un monde agité. Exhortations pour l'âme."
-  ]
+  ],
+  reference: []
 };
 
 const SERIES_STORAGE_KEY = 'exhortation-saved-series';
@@ -136,6 +143,37 @@ export default function PastoralAIModule({ settings, members, transactions, even
     return saved ? saved.theme : '';
   });
   const responseRef = useRef<HTMLDivElement>(null);
+
+  const BIBLE_BOOKS = [
+    { name: 'Genèse', chapters: 50 }, { name: 'Exode', chapters: 40 }, { name: 'Lévitique', chapters: 27 },
+    { name: 'Nombres', chapters: 36 }, { name: 'Deutéronome', chapters: 34 }, { name: 'Josué', chapters: 24 },
+    { name: 'Juges', chapters: 21 }, { name: 'Ruth', chapters: 4 }, { name: '1 Samuel', chapters: 31 },
+    { name: '2 Samuel', chapters: 24 }, { name: '1 Rois', chapters: 22 }, { name: '2 Rois', chapters: 25 },
+    { name: '1 Chroniques', chapters: 29 }, { name: '2 Chroniques', chapters: 36 }, { name: 'Esdras', chapters: 10 },
+    { name: 'Néhémie', chapters: 13 }, { name: 'Esther', chapters: 10 }, { name: 'Job', chapters: 42 },
+    { name: 'Psaumes', chapters: 150 }, { name: 'Proverbes', chapters: 31 }, { name: 'Ecclésiaste', chapters: 12 },
+    { name: 'Cantique', chapters: 8 }, { name: 'Ésaïe', chapters: 66 }, { name: 'Jérémie', chapters: 52 },
+    { name: 'Lamentations', chapters: 5 }, { name: 'Ézéchiel', chapters: 48 }, { name: 'Daniel', chapters: 12 },
+    { name: 'Osée', chapters: 14 }, { name: 'Joël', chapters: 3 }, { name: 'Amos', chapters: 9 },
+    { name: 'Abdias', chapters: 1 }, { name: 'Jonas', chapters: 4 }, { name: 'Michée', chapters: 7 },
+    { name: 'Nahum', chapters: 3 }, { name: 'Habacuc', chapters: 3 }, { name: 'Sophonie', chapters: 3 },
+    { name: 'Aggée', chapters: 2 }, { name: 'Zacharie', chapters: 14 }, { name: 'Malachie', chapters: 4 },
+    { name: 'Matthieu', chapters: 28 }, { name: 'Marc', chapters: 16 }, { name: 'Luc', chapters: 24 },
+    { name: 'Jean', chapters: 21 }, { name: 'Actes', chapters: 28 }, { name: 'Romains', chapters: 16 },
+    { name: '1 Corinthiens', chapters: 16 }, { name: '2 Corinthiens', chapters: 13 }, { name: 'Galates', chapters: 6 },
+    { name: 'Éphésiens', chapters: 6 }, { name: 'Philippiens', chapters: 4 }, { name: 'Colossiens', chapters: 4 },
+    { name: '1 Thessaloniciens', chapters: 5 }, { name: '2 Thessaloniciens', chapters: 3 }, { name: '1 Timothée', chapters: 6 },
+    { name: '2 Timothée', chapters: 4 }, { name: 'Tite', chapters: 3 }, { name: 'Philémon', chapters: 1 },
+    { name: 'Hébreux', chapters: 13 }, { name: 'Jacques', chapters: 5 }, { name: '1 Pierre', chapters: 5 },
+    { name: '2 Pierre', chapters: 3 }, { name: '1 Jean', chapters: 5 }, { name: '2 Jean', chapters: 1 },
+    { name: '3 Jean', chapters: 1 }, { name: 'Jude', chapters: 1 }, { name: 'Apocalypse', chapters: 22 },
+  ];
+  const [refBook, setRefBook] = useState('Jean');
+  const [refChapter, setRefChapter] = useState(3);
+  const [refVerse, setRefVerse] = useState('');
+  const [refResult, setRefResult] = useState<string | null>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refTranslation, setRefTranslation] = useState('segond');
 
   useEffect(() => {
     if (parsedDays.length > 0 && action === 'exhortation') {
@@ -216,6 +254,36 @@ export default function PastoralAIModule({ settings, members, transactions, even
 
   const applySuggested = (text: string) => {
     setPromptInput(text);
+  };
+
+  const fetchBibleVerse = async () => {
+    if (!refBook) return;
+    setRefLoading(true);
+    setRefResult(null);
+    try {
+      const ref = refVerse
+        ? `${refBook}+${refChapter}:${refVerse}`
+        : `${refBook}+${refChapter}`;
+      const res = await fetch(`https://bible-api.com/${ref}?translation=${refTranslation}`);
+      const data: any = await res.json();
+      if (data.error) {
+        setRefResult(`❌ ${data.error}`);
+      } else {
+        const lines = data.verses?.map((v: any) => `**${v.book_name} ${v.chapter}:${v.verse}**\n${v.text}`).join('\n\n') || data.text;
+        setRefResult(data.reference + '\n\n' + lines + '\n\n*— ' + data.translation_name + '*');
+      }
+    } catch (err: any) {
+      setRefResult(`❌ Erreur: ${err.message}`);
+    }
+    setRefLoading(false);
+  };
+
+  const sendRefToIA = () => {
+    if (refResult) {
+      const clean = refResult.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1');
+      setAction('bible-study');
+      setPromptInput(`Étude biblique détaillée sur :\n\n${clean}`);
+    }
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -578,7 +646,41 @@ ${response
               </div>
             </div>
 
-            <form onSubmit={handleGenerate} className="space-y-4 pt-1">
+            <form onSubmit={action === 'reference' ? (e) => { e.preventDefault(); fetchBibleVerse(); } : handleGenerate} className="space-y-4 pt-1">
+              {action === 'reference' ? (
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-slate-700">Référence biblique</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select value={refBook} onChange={e => { setRefBook(e.target.value); setRefChapter(1); setRefVerse(''); setRefResult(null); }}
+                      className="text-xs p-2 border border-slate-200 rounded-lg bg-white focus:outline-indigo-600">
+                      {BIBLE_BOOKS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+                    </select>
+                    <select value={refChapter} onChange={e => { setRefChapter(Number(e.target.value)); setRefVerse(''); setRefResult(null); }}
+                      className="text-xs p-2 border border-slate-200 rounded-lg bg-white focus:outline-indigo-600">
+                      {Array.from({ length: BIBLE_BOOKS.find(b => b.name === refBook)?.chapters || 1 }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    <input type="text" value={refVerse} onChange={e => setRefVerse(e.target.value.replace(/[^0-9,\-]/g, ''))}
+                      placeholder="Verset(s) (ex: 16-18)"
+                      className="text-xs p-2 border border-slate-200 rounded-lg bg-white focus:outline-indigo-600" />
+                  </div>
+                  <div className="flex gap-2">
+                    <select value={refTranslation} onChange={e => setRefTranslation(e.target.value)}
+                      className="text-xs p-1.5 border border-slate-200 rounded-lg bg-white">
+                      <option value="segond">Segond 1910</option>
+                      <option value="kjv">King James (KJV)</option>
+                      <option value="web">World English (WEB)</option>
+                      <option value="ylt">Young's Literal (YLT)</option>
+                    </select>
+                    <button type="submit" disabled={refLoading || !refBook}
+                      className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer">
+                      {refLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bookmark className="w-4 h-4" />}
+                      {refLoading ? 'Recherche...' : 'Chercher'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-xs font-semibold text-slate-700">Instructions *</label>
@@ -619,6 +721,7 @@ ${response
                   </div>
                 )}
               </div>
+              )}
 
               {/* Quick prompts */}
               <div className="space-y-1">
@@ -666,6 +769,7 @@ ${response
                 </div>
               )}
 
+              {action !== 'reference' && (
               <button
                 type="submit"
                 disabled={generating}
@@ -677,6 +781,7 @@ ${response
                   <><Send className="w-4 h-4" /><span>Générer</span></>
                 )}
               </button>
+              )}
             </form>
           </div>
         </div>
@@ -725,7 +830,33 @@ ${response
             </div>
 
             <div ref={responseRef} className="flex-1 overflow-y-auto max-h-[450px] pr-1">
-              {!response && !generating && !(action === 'exhortation' && seriesMode && parsedDays.length > 0) && (
+              {action === 'reference' && refResult && (
+                <div className="space-y-3">
+                  <div className="bg-white border border-indigo-200 rounded-lg p-4">
+                    <div className="prose prose-slate prose-xs text-xs max-w-none text-slate-700 leading-relaxed font-sans">
+                      <ReactMarkdown>{refResult}</ReactMarkdown>
+                    </div>
+                  </div>
+                  <button onClick={sendRefToIA}
+                    className="flex items-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer border border-indigo-200">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Analyser avec l'IA (Étude Biblique)
+                  </button>
+                </div>
+              )}
+              {action === 'reference' && !refResult && !refLoading && (
+                <div className="text-center py-20 text-slate-400 space-y-2">
+                  <Bookmark className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-light">Sélectionnez un livre, chapitre et verset, puis cliquez sur "Chercher".</p>
+                </div>
+              )}
+              {action === 'reference' && refLoading && (
+                <div className="text-center py-24 text-slate-500 space-y-3">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+                  <p className="text-xs font-semibold animate-pulse text-indigo-600">Recherche du verset...</p>
+                </div>
+              )}
+              {action !== 'reference' && !response && !generating && !(action === 'exhortation' && seriesMode && parsedDays.length > 0) && (
                 <div className="text-center py-20 text-slate-400 space-y-2">
                   <Sparkles className="w-8 h-8 text-slate-300 mx-auto" />
                   <p className="text-xs font-light">Le résultat apparaîtra ici en temps réel.</p>
