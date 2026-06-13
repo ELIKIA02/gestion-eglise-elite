@@ -89,13 +89,16 @@ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'facebook'>('messagerie');
 
   const [fbMessage, setFbMessage] = useState('');
-  const [fbImageUrl, setFbImageUrl] = useState('');
   const [fbPageId, setFbPageId] = useState('');
   const [fbPages, setFbPages] = useState<any[]>([]);
   const [fbScheduleMode, setFbScheduleMode] = useState(false);
   const [fbScheduledAt, setFbScheduledAt] = useState('');
   const [fbSending, setFbSending] = useState(false);
   const [fbResult, setFbResult] = useState<string | null>(null);
+  const [fbImages, setFbImages] = useState<{ file: File; preview: string; uploaded: boolean; photoId?: string }[]>([]);
+  const [fbPostType, setFbPostType] = useState<'simple' | 'article'>('simple');
+  const [fbUploadedCount, setFbUploadedCount] = useState(0);
+  const fbImageInputRef = useRef<HTMLInputElement>(null);
 
   // Bump QR version when new QR arrives to force image refresh
   useEffect(() => {
@@ -501,34 +504,98 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
     }
   };
 
+  // Upload one image to Facebook and return photoId
+  const uploadFbImage = async (img: typeof fbImages[0], token: string): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('image', img.file);
+    formData.append('pageId', fbPageId);
+    formData.append('accessToken', token);
+    try {
+      const res = await fetch('/api/facebook/upload-image', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) return data.photoId;
+      return null;
+    } catch { return null; }
+  };
+
   const handleFbPublish = async () => {
     if (!fbMessage.trim() || !fbPageId) return;
     setFbSending(true);
     setFbResult(null);
+    const token = settings?.facebookToken;
+    if (!token) { setFbResult('❌ Token Facebook non configuré'); setFbSending(false); return; }
+
     try {
-      const token = settings?.facebookToken;
-      if (fbScheduleMode && fbScheduledAt) {
-        const res = await fetch('/api/facebook/schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pageId: fbPageId, message: fbMessage, imageUrl: fbImageUrl || undefined, scheduledTime: fbScheduledAt, accessToken: token }),
-        });
-        const data = await res.json();
-        setFbResult(data.success ? '✅ Publication programmée avec succès' : `❌ ${data.error}`);
+      // Upload all images that haven't been uploaded yet
+      const photoIds: string[] = [];
+      for (const img of fbImages) {
+        if (img.uploaded && img.photoId) {
+          photoIds.push(img.photoId);
+        } else {
+          const pid = await uploadFbImage(img, token);
+          if (pid) { photoIds.push(pid); img.photoId = pid; img.uploaded = true; }
+        }
+      }
+
+      const res = await fetch('/api/facebook/post-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pageId: fbPageId,
+          message: fbMessage,
+          photoIds: photoIds.length > 0 ? photoIds : undefined,
+          accessToken: token,
+          scheduledTime: fbScheduleMode && fbScheduledAt ? fbScheduledAt : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFbResult(data.scheduled
+          ? '✅ Article programmé avec succès'
+          : '✅ Publié sur Facebook avec succès');
+        setFbMessage('');
+        setFbImages([]);
+        setFbUploadedCount(0);
       } else {
-        const res = await fetch('/api/facebook/post', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pageId: fbPageId, message: fbMessage, imageUrl: fbImageUrl || undefined, accessToken: token }),
-        });
-        const data = await res.json();
-        setFbResult(data.success ? '✅ Publié sur Facebook avec succès' : `❌ ${data.error}`);
+        setFbResult(`❌ ${data.error}`);
       }
     } catch (err: any) {
       setFbResult(`❌ Erreur: ${err.message}`);
     }
     setFbSending(false);
   };
+
+  const handleFbAddImages = (files: FileList | null) => {
+    if (!files) return;
+    const newImages = Array.from(files).map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      uploaded: false,
+    }));
+    setFbImages(prev => [...prev, ...newImages]);
+  };
+
+  const handleFbRemoveImage = (index: number) => {
+    setFbImages(prev => {
+      const img = prev[index];
+      if (img?.preview) URL.revokeObjectURL(img.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleFbReorderImage = (from: number, to: number) => {
+    setFbImages(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => { fbImages.forEach(img => { if (img.preview) URL.revokeObjectURL(img.preview); }); };
+  }, []);
 
   // Auto-load Facebook pages when token is available
   useEffect(() => {
@@ -1029,7 +1096,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm space-y-4">
           <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <Globe className="w-4 h-4 text-blue-600" />
-            Publier sur Facebook
+            Publication Facebook — Article Riche
           </h3>
           {!settings?.facebookToken ? (
             <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-xs text-amber-800 dark:text-amber-300">
@@ -1038,19 +1105,85 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
             </div>
           ) : (
             <>
+              {/* Type de publication */}
+              <div className="flex gap-2">
+                <button onClick={() => setFbPostType('simple')}
+                  className={`flex-1 text-xs py-2 px-3 border rounded-lg font-semibold transition-all cursor-pointer ${fbPostType === 'simple' ? 'bg-blue-50 text-blue-800 border-blue-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600'}`}>
+                  Texte simple
+                </button>
+                <button onClick={() => setFbPostType('article')}
+                  className={`flex-1 text-xs py-2 px-3 border rounded-lg font-semibold transition-all cursor-pointer ${fbPostType === 'article' ? 'bg-blue-50 text-blue-800 border-blue-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 dark:hover:bg-slate-600'}`}>
+                  <Globe className="w-3 h-3 inline mr-1" />Article avec images
+                </button>
+              </div>
+
+              {/* Message */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">Message</label>
-                <textarea value={fbMessage} onChange={e => setFbMessage(e.target.value)} rows={5}
-                  placeholder="Écrivez le contenu de votre publication..."
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">
+                  Message {fbPostType === 'article' ? 'de l\'article' : ''}
+                  <span className="text-[10px] text-slate-400 ml-1">({fbMessage.length} car.)</span>
+                </label>
+                <textarea value={fbMessage} onChange={e => setFbMessage(e.target.value)} rows={fbPostType === 'article' ? 6 : 4}
+                  placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
                   className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">URL Image (optionnelle)</label>
-                  <input type="url" value={fbImageUrl} onChange={e => setFbImageUrl(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
+
+              {/* Images (pour article uniquement) */}
+              {fbPostType === 'article' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">
+                    Images ({fbImages.length}/10)
+                  </label>
+
+                  {/* Zone de dépôt */}
+                  <div
+                    onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('border-indigo-400', 'bg-indigo-50'); }}
+                    onDragLeave={e => { e.currentTarget.classList.remove('border-indigo-400', 'bg-indigo-50'); }}
+                    onDrop={e => { e.preventDefault(); e.currentTarget.classList.remove('border-indigo-400', 'bg-indigo-50'); handleFbAddImages(e.dataTransfer.files); }}
+                    onClick={() => fbImageInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">
+                    <Image className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-1" />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Cliquez ou glissez-déposez vos images ici</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WebP — jusqu'à 10 Mo</p>
+                    <input ref={fbImageInputRef} type="file" accept="image/*" multiple
+                      onChange={e => { handleFbAddImages(e.target.files); e.target.value = ''; }}
+                      className="hidden" />
+                  </div>
+
+                  {/* Galerie d'images */}
+                  {fbImages.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      {fbImages.map((img, i) => (
+                        <div key={i} className="relative group rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700">
+                          <img src={img.preview} alt="" className="w-full h-20 object-cover" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                            <button onClick={() => { if (i > 0) handleFbReorderImage(i, i - 1); }}
+                              className="bg-white/90 rounded-full p-1 cursor-pointer hover:bg-white" title="Déplacer à gauche">
+                              <ArrowUp className="w-3 h-3 text-slate-700" />
+                            </button>
+                            <button onClick={() => handleFbRemoveImage(i)}
+                              className="bg-red-500/90 rounded-full p-1 cursor-pointer hover:bg-red-500" title="Supprimer">
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                            <button onClick={() => { if (i < fbImages.length - 1) handleFbReorderImage(i, i + 1); }}
+                              className="bg-white/90 rounded-full p-1 cursor-pointer hover:bg-white" title="Déplacer à droite">
+                              <ArrowDown className="w-3 h-3 text-slate-700" />
+                            </button>
+                          </div>
+                          {img.uploaded && (
+                            <span className="absolute top-0.5 right-0.5 bg-emerald-500 text-white rounded-full p-0.5">
+                              <CheckCircle2 className="w-3 h-3" />
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Sélecteur de page + programmation */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">Page Facebook</label>
                   <select value={fbPageId} onChange={e => setFbPageId(e.target.value)}
@@ -1059,22 +1192,54 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                     {fbPages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
+                <div className="space-y-1">
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                    <input type="checkbox" checked={fbScheduleMode} onChange={e => setFbScheduleMode(e.target.checked)} className="accent-indigo-600" />
+                    Programmer la publication
+                  </label>
+                  {fbScheduleMode && (
+                    <input type="datetime-local" value={fbScheduledAt} onChange={e => setFbScheduledAt(e.target.value)}
+                      className="w-full text-xs p-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400" />
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
-                  <input type="checkbox" checked={fbScheduleMode} onChange={e => setFbScheduleMode(e.target.checked)} className="accent-indigo-600" />
-                  Programmer la publication
-                </label>
-                {fbScheduleMode && (
-                  <input type="datetime-local" value={fbScheduledAt} onChange={e => setFbScheduledAt(e.target.value)}
-                    className="w-full text-xs p-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400" />
-                )}
-              </div>
+
+              {/* Prévisualisation */}
+              {fbMessage.trim() && (
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
+                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase mb-2 tracking-wide">Aperçu</p>
+                  <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden max-w-md mx-auto shadow-sm">
+                    {fbImages.length > 0 && (
+                      <div className={`${fbImages.length === 1 ? '' : 'grid grid-cols-2'} gap-px bg-slate-200 dark:bg-slate-600`}>
+                        {fbImages.slice(0, 4).map((img, i) => (
+                          <div key={i} className="relative bg-slate-100 dark:bg-slate-700 ${fbImages.length === 1 ? 'max-h-64' : 'h-32'} overflow-hidden">
+                            <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                            {i === 3 && fbImages.length > 4 && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
+                                +{fbImages.length - 4}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap line-clamp-4 leading-relaxed">{fbMessage}</p>
+                      <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
+                        <Globe className="w-3 h-3" />
+                        <span>{fbPages.find(p => p.id === fbPageId)?.name || 'Page'} • {fbScheduleMode && fbScheduledAt ? new Date(fbScheduledAt).toLocaleString('fr') : 'Publication immédiate'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bouton publier */}
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
                 <button onClick={handleFbPublish} disabled={fbSending || !fbMessage.trim() || !fbPageId}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border border-blue-500 shadow-xs">
-                  <Globe className="w-4 h-4" />
-                  {fbSending ? 'Publication...' : fbScheduleMode ? 'Programmer' : 'Publier maintenant'}
+                  {fbSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                  {fbSending ? 'Publication en cours...' : fbScheduleMode ? 'Programmer l\'article' : 'Publier maintenant'}
                 </button>
               </div>
               {fbResult && (
@@ -1084,15 +1249,27 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               )}
             </>
           )}
+
+          {/* Footer aide */}
           <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed space-y-1">
-            <p className="font-semibold text-slate-600 dark:text-slate-300">Comment obtenir un token Facebook Page :</p>
-            <ol className="list-decimal pl-4 space-y-0.5">
-              <li>Allez sur <a href="https://developers.facebook.com" target="_blank" rel="noopener" className="text-blue-600 underline">developers.facebook.com</a></li>
-              <li>Créez une App ou utilisez une App existante</li>
-              <li>Ajoutez le produit "Facebook Login" puis "Outils Graph API"</li>
-              <li>Générez un <strong>Token d'accès Page</strong> (long-lived, 60 jours)</li>
-              <li>Copiez-le dans <strong>Paramètres → Token Facebook Page</strong></li>
-            </ol>
+            <p className="font-semibold text-slate-600 dark:text-slate-300">📖 Comment tirer le meilleur de cet outil</p>
+            <ul className="space-y-0.5 pl-1">
+              <li>• <strong>Mode Article</strong> — publiez un texte riche avec jusqu'à 10 photos en album</li>
+              <li>• Les images sont uploadées directement sur Facebook (pas d'hébergement externe)</li>
+              <li>• Faites glisser les images pour les réorganiser avant publication</li>
+              <li>• La prévisualisation vous montre le rendu final exact</li>
+              <li>• La programmation permet de planifier jusqu'à 6 mois à l'avance</li>
+            </ul>
+            <details className="mt-2">
+              <summary className="text-[10px] text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">Comment obtenir un token Facebook Page</summary>
+              <ol className="list-decimal pl-4 mt-1 space-y-0.5">
+                <li>Allez sur <a href="https://developers.facebook.com" target="_blank" rel="noopener" className="text-blue-600 underline">developers.facebook.com</a></li>
+                <li>Créez une App ou utilisez une App existante</li>
+                <li>Ajoutez le produit "Facebook Login" puis "Outils Graph API"</li>
+                <li>Générez un <strong>Token d'accès Page</strong> (long-lived, 60 jours)</li>
+                <li>Copiez-le dans <strong>Paramètres → Token Facebook Page</strong></li>
+              </ol>
+            </details>
           </div>
         </div>
       </div>

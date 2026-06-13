@@ -4,7 +4,10 @@ import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
+import multer from "multer";
 import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage } from "./whatsapp-client";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 dotenv.config();
 
@@ -609,20 +612,77 @@ async function startServer() {
     }
   });
 
-  // --- Facebook Graph API ---
-  app.post("/api/facebook/post", async (req, res) => {
+  // --- Facebook Graph API (avancé) ---
+
+  // Upload d'image vers Facebook Page → retourne l'ID photo
+  app.post("/api/facebook/upload-image", upload.single('image'), async (req, res) => {
     try {
-      const { pageId, message, imageUrl, accessToken } = req.body;
+      const { pageId, accessToken } = req.body;
+      const file = req.file;
+      if (!pageId || !accessToken || !file) {
+        return res.status(400).json({ success: false, error: "pageId, accessToken et image requis" });
+      }
+      const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
+      const bodyParts: string[] = [];
+      bodyParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="${file.originalname}"\r\nContent-Type: ${file.mimetype}\r\n\r\n`);
+      const bodyStart = Buffer.from(bodyParts.join(''), 'utf-8');
+      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}--\r\n`, 'utf-8');
+      const body = Buffer.concat([bodyStart, file.buffer, bodyEnd]);
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+        body,
+      });
+      const data: any = await fbRes.json();
+      if (data.id) {
+        res.json({ success: true, photoId: data.id, url: data.images?.[0]?.source || null });
+      } else {
+        res.status(400).json({ success: false, error: data.error?.message || 'Erreur Facebook' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Publier un article (texte seul OU texte + images multiples en album)
+  function buildAttachedMedia(photoIds: string[]): { media_fbid: string }[] {
+    return photoIds.map(id => ({ media_fbid: id }));
+  }
+
+  app.post("/api/facebook/post-article", async (req, res) => {
+    try {
+      const { pageId, message, photoIds, scheduledTime, accessToken } = req.body;
       if (!pageId || !message || !accessToken) {
         return res.status(400).json({ success: false, error: "pageId, message et accessToken requis" });
       }
-      const apiUrl = imageUrl
-        ? `https://graph.facebook.com/v19.0/${pageId}/photos?url=${encodeURIComponent(imageUrl)}&message=${encodeURIComponent(message)}&access_token=${accessToken}`
-        : `https://graph.facebook.com/v19.0/${pageId}/feed?message=${encodeURIComponent(message)}&access_token=${accessToken}`;
-      const fbRes = await fetch(apiUrl, { method: 'POST' });
-      const data = await fbRes.json();
+
+      const body: Record<string, any> = { message, access_token: accessToken };
+
+      // Si images uploadées → les attacher en album
+      if (Array.isArray(photoIds) && photoIds.length > 0) {
+        body.attached_media = JSON.stringify(buildAttachedMedia(photoIds));
+      }
+
+      // Mode programmé
+      if (scheduledTime) {
+        body.scheduled_publish_time = Math.floor(new Date(scheduledTime).getTime() / 1000);
+        body.published = false;
+      }
+
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data: any = await fbRes.json();
       if (data.id) {
-        res.json({ success: true, postId: data.id });
+        res.json({
+          success: true,
+          postId: data.id,
+          type: (Array.isArray(photoIds) && photoIds.length > 0) ? 'article' : 'text',
+          imageCount: Array.isArray(photoIds) ? photoIds.length : 0,
+          scheduled: !!scheduledTime,
+        });
       } else {
         res.status(400).json({ success: false, error: data.error?.message || 'Erreur Facebook inconnue' });
       }
@@ -631,39 +691,15 @@ async function startServer() {
     }
   });
 
-  app.post("/api/facebook/schedule", async (req, res) => {
-    try {
-      const { pageId, message, imageUrl, scheduledTime, accessToken } = req.body;
-      if (!pageId || !message || !scheduledTime || !accessToken) {
-        return res.status(400).json({ success: false, error: "pageId, message, scheduledTime et accessToken requis" });
-      }
-      const timestamp = Math.floor(new Date(scheduledTime).getTime() / 1000);
-      const apiUrl = imageUrl
-        ? `https://graph.facebook.com/v19.0/${pageId}/photos`
-        : `https://graph.facebook.com/v19.0/${pageId}/feed`;
-      const body: any = { message, access_token: accessToken, scheduled_publish_time: timestamp };
-      if (imageUrl) body.url = imageUrl;
-      body.published = false;
-      const fbRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await fbRes.json();
-      if (data.id) {
-        res.json({ success: true, postId: data.id });
-      } else {
-        res.status(400).json({ success: false, error: data.error?.message || 'Erreur Facebook inconnue' });
-      }
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
+  // Vérifier le token et lister les pages
   app.post("/api/facebook/verify", async (req, res) => {
     try {
       const { accessToken } = req.body;
       if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
-      const data = await fbRes.json();
+      const data: any = await fbRes.json();
       if (data.data) {
-        res.json({ success: true, pages: data.data.map((p: any) => ({ id: p.id, name: p.name, category: p.category })) });
+        res.json({ success: true, pages: data.data.map((p: any) => ({ id: p.id, name: p.name, category: p.category, picture: p.picture?.data?.url || null })) });
       } else {
         res.status(400).json({ success: false, error: data.error?.message || 'Token invalide' });
       }
