@@ -83,6 +83,17 @@ export default function EnseignementModule({ settings, members, departments }: E
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [recipientSearch, setRecipientSearch] = useState('');
   const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
+  const [sendMode, setSendMode] = useState<'members' | 'group'>('members');
+  const [whatsappGroups, setWhatsappGroups] = useState<{ id: string; name: string; subject?: string }[]>([]);
+  const [selectedGroupJid, setSelectedGroupJid] = useState('');
+
+  useEffect(() => {
+    if (scheduleMode) {
+      fetch('/api/whatsapp/groups').then(r => r.json()).then(groups => {
+        if (Array.isArray(groups)) setWhatsappGroups(groups);
+      }).catch(() => {});
+    }
+  }, [scheduleMode]);
 
   useEffect(() => {
     const imported = importFromPastoralAI();
@@ -191,25 +202,40 @@ export default function EnseignementModule({ settings, members, departments }: E
     let success = 0;
     let failed = 0;
 
-    for (let i = 0; i < editDays.length; i++) {
-      const day = editDays[i];
-      const dayDate = new Date(new Date(scheduledAt).getTime() + i * 86400000);
-      try {
-        const targetMembers = members.filter(m => m.id && selectedRecipients.includes(m.id));
-        const body: any = {
-          title: `${editTitle} - ${day.title}`,
-          text: day.text,
-          targetGroup: `${selectedRecipients.length} membre(s) sélectionné(s)`,
-          recipients: targetMembers.map(m => ({ name: m.name, phone: m.phone })),
-          scheduledAt: dayDate.toISOString(),
-        };
-        const res = await fetch('/api/whatsapp/schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (res.ok) success++; else failed++;
-      } catch { failed++; }
+    if (sendMode === 'group') {
+      for (let i = 0; i < editDays.length; i++) {
+        const day = editDays[i];
+        try {
+          const res = await fetch('/api/whatsapp/send-group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupJid: selectedGroupJid, text: `📖 *${editTitle}* — ${day.title}\n\n${day.text}` }),
+          });
+          const data = await res.json();
+          if (data.success) success++; else failed++;
+        } catch { failed++; }
+      }
+    } else {
+      for (let i = 0; i < editDays.length; i++) {
+        const day = editDays[i];
+        const dayDate = new Date(new Date(scheduledAt).getTime() + i * 86400000);
+        try {
+          const targetMembers = members.filter(m => m.id && selectedRecipients.includes(m.id));
+          const body: any = {
+            title: `${editTitle} - ${day.title}`,
+            text: `📖 *${editTitle}* — ${day.title}\n\n${day.text}`,
+            targetGroup: `${selectedRecipients.length} membre(s)`,
+            recipients: targetMembers.map(m => ({ name: m.name, phone: m.phone })),
+            scheduledAt: dayDate.toISOString(),
+          };
+          const res = await fetch('/api/whatsapp/schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (res.ok) success++; else failed++;
+        } catch { failed++; }
+      }
     }
 
     const updated: Enseignement = { ...editing, status: 'scheduled', scheduledAt, updatedAt: new Date().toISOString() };
@@ -442,65 +468,86 @@ export default function EnseignementModule({ settings, members, departments }: E
                 <>
                   <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
                     className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <label className="text-[10px] font-medium text-slate-600 block">Destinataires</label>
-                    <div className="relative">
-                      <input type="text" value={recipientSearch}
-                        onChange={e => { setRecipientSearch(e.target.value); setShowRecipientDropdown(true); }}
-                        onFocus={() => setShowRecipientDropdown(true)}
-                        placeholder="Rechercher des membres..."
-                        className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
-                      {showRecipientDropdown && recipientSearch && (
-                        <div className="absolute z-10 top-full mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                          {members.filter(m => (m.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).slice(0, 10).map(m => {
-                            const selected = selectedRecipients.includes(m.id!);
-                            return (
-                              <button key={m.id} type="button"
-                                onClick={() => {
-                                  setSelectedRecipients(prev =>
-                                    selected ? prev.filter(id => id !== m.id) : [...prev, m.id!]
-                                  );
-                                  setRecipientSearch('');
-                                  setShowRecipientDropdown(false);
-                                }}
-                                className={`w-full text-left p-2 text-xs hover:bg-indigo-50 cursor-pointer flex items-center gap-2 ${selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'}`}>
-                                <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[8px] ${selected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
-                                  {selected ? '✓' : ''}
-                                </span>
-                                {m.name} — {m.phone || 'Sans téléphone'}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                    <div className="flex gap-1">
+                      <button type="button" onClick={() => setSendMode('members')}
+                        className={`flex-1 text-xs py-1.5 px-3 border rounded-md font-semibold ${sendMode === 'members' ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'}`}>
+                        Membres
+                      </button>
+                      <button type="button" onClick={() => setSendMode('group')}
+                        className={`flex-1 text-xs py-1.5 px-3 border rounded-md font-semibold ${sendMode === 'group' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'}`}>
+                        Groupe WhatsApp
+                      </button>
                     </div>
-                    {selectedRecipients.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedRecipients.map(id => {
-                          const m = members.find(mm => mm.id === id);
-                          if (!m) return null;
-                          return (
-                            <span key={id} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
-                              {m.name}
-                              <button type="button" onClick={() => setSelectedRecipients(prev => prev.filter(x => x !== id))}
-                                className="hover:text-indigo-900 cursor-pointer">&times;</button>
-                            </span>
-                          );
-                        })}
+                    {sendMode === 'members' ? (
+                      <div className="relative">
+                        <input type="text" value={recipientSearch}
+                          onChange={e => { setRecipientSearch(e.target.value); setShowRecipientDropdown(true); }}
+                          onFocus={() => setShowRecipientDropdown(true)}
+                          placeholder="Rechercher des membres..."
+                          className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
+                        {showRecipientDropdown && recipientSearch && (
+                          <div className="absolute z-10 top-full mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                            {members.filter(m => (m.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).slice(0, 10).map(m => {
+                              const selected = selectedRecipients.includes(m.id!);
+                              return (
+                                <button key={m.id} type="button"
+                                  onClick={() => {
+                                    setSelectedRecipients(prev =>
+                                      selected ? prev.filter(id => id !== m.id) : [...prev, m.id!]
+                                    );
+                                    setRecipientSearch('');
+                                    setShowRecipientDropdown(false);
+                                  }}
+                                  className={`w-full text-left p-2 text-xs hover:bg-indigo-50 cursor-pointer flex items-center gap-2 ${selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'}`}>
+                                  <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[8px] ${selected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                    {selected ? '✓' : ''}
+                                  </span>
+                                  {m.name} — {m.phone || 'Sans téléphone'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {selectedRecipients.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {selectedRecipients.map(id => {
+                              const m = members.find(mm => mm.id === id);
+                              if (!m) return null;
+                              return (
+                                <span key={id} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                  {m.name}
+                                  <button type="button" onClick={() => setSelectedRecipients(prev => prev.filter(x => x !== id))}
+                                    className="hover:text-indigo-900 cursor-pointer">&times;</button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-slate-400">{selectedRecipients.length} membre(s) sélectionné(s)</p>
                       </div>
+                    ) : (
+                      <select value={selectedGroupJid} onChange={e => setSelectedGroupJid(e.target.value)}
+                        className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white">
+                        <option value="">Sélectionnez un groupe</option>
+                        {whatsappGroups.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                        {whatsappGroups.length === 0 && <option disabled>Aucun groupe trouvé (connectez WhatsApp)</option>}
+                      </select>
                     )}
-                    <p className="text-[10px] text-slate-400">{selectedRecipients.length} membre(s) sélectionné(s)</p>
                   </div>
-                  <button onClick={handleSchedule} disabled={scheduling || !scheduledAt || selectedRecipients.length === 0}
+                  <button onClick={handleSchedule} disabled={scheduling || !scheduledAt || (sendMode === 'members' && selectedRecipients.length === 0) || (sendMode === 'group' && !selectedGroupJid)}
                     className="w-full flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all">
                     {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    {scheduling ? 'Programmation...' : `Programmer (${editDays.length} jour${editDays.length > 1 ? 's' : ''}, ${selectedRecipients.length} dst.)`}
+                    {scheduling ? 'Programmation...' : `Programmer (${editDays.length} jour${editDays.length > 1 ? 's' : ''})`}
                   </button>
                 </>
               )}
               <div className="text-[10px] text-slate-400 space-y-1">
                 <p>💡 Les jours seront espacés de 24h à partir de la date choisie.</p>
-                <p>📱 Les messages seront envoyés via WhatsApp aux membres.</p>
+                <p>📱 Envoi via WhatsApp (membres individuels programmés, groupe immédiat).</p>
               </div>
             </div>
 
