@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { collection, addDoc, deleteDoc, doc, db, handleFirestoreError, OperationType } from '../firebase';
-import { ChurchEvent, EventType, ChurchSettings } from '../types';
-import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, ClipboardList, Trash2, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, CalendarDays } from 'lucide-react';
+import { ChurchEvent, ChurchSettings } from '../types';
+import { Sparkles, Calendar, Plus, CalendarIcon, Users, User, Clock, AlertTriangle, Trash2, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { generateGoogleCalendarUrl, generateOutlookCalendarUrl } from '../utils/calendar';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import ServicePlanningModule from './ServicePlanningModule';

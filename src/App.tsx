@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, onSnapshot, query, db, loadFromServer } from './firebase';
-import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department, AppNotification, AppUser, LiturgicalTheme } from './types';
+import { Member, FinanceTransaction, ChurchEvent, CommunicationLog, ChurchSettings, Department, AppNotification, AppUser } from './types';
 
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardModule from './components/DashboardModule';
@@ -22,7 +22,7 @@ import HelpModule from './components/HelpModule';
 import NotificationBell from './components/NotificationBell';
 import OnlineStatus from './components/OnlineStatus';
 
-import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, FileText, Shield, Church, UserCheck, Bookmark, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, CalendarDays, MessageSquareText, Sparkles, FileBarChart2, MoreHorizontal, Settings, ClipboardCheck, Building2, BookOpen, Shield, Church, UserCheck, Bookmark, HelpCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');

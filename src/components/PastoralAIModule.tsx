@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Sparkles, BookOpen, MessageSquare, Heart, Copy, Printer, Loader2, Download, History, Send, Users, DollarSign, Calendar, FileText, FileDown, Sun, CheckSquare, Square, Clock, Bookmark } from 'lucide-react';
+import { Sparkles, BookOpen, MessageSquare, Heart, Copy, Printer, Loader2, History, Send, Users, Calendar, FileText, FileDown, Sun, CheckSquare, Square, Clock, Bookmark } from 'lucide-react';
 import { ChurchSettings, Member, FinanceTransaction, ChurchEvent } from '../types';
 
 interface PastoralAIModuleProps {

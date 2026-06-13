@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { Member, FinanceTransaction, ChurchEvent, CommunicationLog } from '../types';
 import type { ChurchSettings } from '../types';
-import { Users, DollarSign, Calendar, Sparkles, Send, AlertTriangle, ShieldCheck, HeartCrack, ChevronRight, Church, Sun, BookOpen, MessageSquare, BarChart3, FileText } from 'lucide-react';
+import { Users, DollarSign, Calendar, Sparkles, Send, AlertTriangle, ShieldCheck, HeartCrack, ChevronRight, Church, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface DashboardModuleProps {
@@ -245,7 +245,7 @@ export default function DashboardModule({
           <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center"><Calendar className="w-4 h-4 text-amber-600" /></div>
           <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Cultes</div><div className="text-[10px] text-slate-400">Programmer</div></div>
         </button>
-        <button onClick={() => onNavigate('documents')}
+        <button onClick={() => onNavigate('ressources')}
           className="flex items-center gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-purple-300 dark:hover:border-purple-500 transition-all shadow-xs cursor-pointer">
           <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"><FileText className="w-4 h-4 text-purple-600" /></div>
           <div className="text-left"><div className="text-xs font-bold text-slate-800 dark:text-slate-200">Documents</div><div className="text-[10px] text-slate-400">Certificats & reçus</div></div>

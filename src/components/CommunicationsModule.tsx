@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe, ArrowUp, ArrowDown, Bold, Italic, Strikethrough } from 'lucide-react';
+import { Send, Users, HelpCircle, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, Download, FileText, Vote, Globe, ArrowUp, ArrowDown, Bold, Italic, Strikethrough } from 'lucide-react';
 import PollsModule from './PollsModule';
 import RichTextEditor, { formatForFacebook } from './RichTextEditor';
 

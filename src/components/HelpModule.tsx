@@ -1,4 +1,5 @@
-import { HelpCircle, Facebook, Smartphone, Globe, CheckCircle2, XCircle, ArrowRight, ExternalLink, Lock, Image, Calendar, Settings, MessageSquare, QrCode, Clock, Link, Users } from 'lucide-react';
+import React from 'react';
+import { Globe, Smartphone, ArrowRight, Lock, Settings, MessageSquare, QrCode, Clock, Link, Users } from 'lucide-react';
 
 export default function HelpModule() {
   return (
