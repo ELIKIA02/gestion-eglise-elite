@@ -645,7 +645,7 @@ async function startServer() {
       const bodyParts: string[] = [];
       bodyParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="${file.originalname}"\r\nContent-Type: ${file.mimetype}\r\n\r\n`);
       const bodyStart = Buffer.from(bodyParts.join(''), 'utf-8');
-      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}--\r\n`, 'utf-8');
+      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}\r\nContent-Disposition: form-data; name="published"\r\n\r\nfalse\r\n--${boundary}--\r\n`, 'utf-8');
       const body = Buffer.concat([bodyStart, file.buffer, bodyEnd]);
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
         method: 'POST',
@@ -683,7 +683,7 @@ async function startServer() {
       const bodyParts: string[] = [];
       bodyParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
       const bodyStart = Buffer.from(bodyParts.join(''), 'utf-8');
-      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}--\r\n`, 'utf-8');
+      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}\r\nContent-Disposition: form-data; name="published"\r\n\r\nfalse\r\n--${boundary}--\r\n`, 'utf-8');
       const fbBody = Buffer.concat([bodyStart, buffer, bodyEnd]);
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
         method: 'POST',
