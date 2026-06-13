@@ -408,7 +408,7 @@ export default function App() {
               settings={settings} loading={loadingComms} onRefresh={() => {}} presetTarget={presetTarget} presetText={presetMessageText} onConsumePresetText={() => setPresetMessageText(undefined)} />
           )}
           {activeTab === 'ressources' && (
-            <RessourcesModule members={members} settings={settings} departments={departments} onNavigate={handleNavigate} />
+            <RessourcesModule members={members} settings={settings} departments={departments} />
           )}
           {activeTab === 'sacraments' && (
             <SacramentsModule members={members} settings={settings} />

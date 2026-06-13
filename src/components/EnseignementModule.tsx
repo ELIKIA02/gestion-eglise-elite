@@ -65,10 +65,9 @@ interface EnseignementModuleProps {
   settings: any;
   members: Member[];
   departments: any[];
-  onNavigate?: (tab: string, text?: string) => void;
 }
 
-export default function EnseignementModule({ settings, members, departments, onNavigate }: EnseignementModuleProps) {
+export default function EnseignementModule({ settings, members, departments }: EnseignementModuleProps) {
   const [enseignements, setEnseignements] = useState<Enseignement[]>(loadAll);
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [editing, setEditing] = useState<Enseignement | null>(null);
@@ -81,6 +80,9 @@ export default function EnseignementModule({ settings, members, departments, onN
   const [saving, setSaving] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [msg, setMsg] = useState('');
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [showRecipientDropdown, setShowRecipientDropdown] = useState(false);
 
   useEffect(() => {
     const imported = importFromPastoralAI();
@@ -182,15 +184,6 @@ export default function EnseignementModule({ settings, members, departments, onN
     if (editing?.id === id) setView('list');
   };
 
-  const handleSendToComms = () => {
-    if (!editing) return;
-    syncWysiwyg();
-    const text = editDays.map((d, i) =>
-      `*Jour ${i + 1} : ${d.title}*\n${d.text}`
-    ).join('\n\n');
-    onNavigate?.('comms', `📖 *${editTitle}*\n\n${text}`);
-  };
-
   const handleSchedule = async () => {
     if (!editing || !scheduledAt) return;
     syncWysiwyg();
@@ -202,11 +195,12 @@ export default function EnseignementModule({ settings, members, departments, onN
       const day = editDays[i];
       const dayDate = new Date(new Date(scheduledAt).getTime() + i * 86400000);
       try {
+        const targetMembers = members.filter(m => m.id && selectedRecipients.includes(m.id));
         const body: any = {
           title: `${editTitle} - ${day.title}`,
           text: day.text,
-          targetGroup: 'Tous les membres',
-          recipients: members.map(m => ({ name: m.name, phone: m.phone })),
+          targetGroup: `${selectedRecipients.length} membre(s) sélectionné(s)`,
+          recipients: targetMembers.map(m => ({ name: m.name, phone: m.phone })),
           scheduledAt: dayDate.toISOString(),
         };
         const res = await fetch('/api/whatsapp/schedule', {
@@ -448,10 +442,59 @@ export default function EnseignementModule({ settings, members, departments, onN
                 <>
                   <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
                     className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
-                  <button onClick={handleSendToComms} disabled={!onNavigate}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-medium text-slate-600 block">Destinataires</label>
+                    <div className="relative">
+                      <input type="text" value={recipientSearch}
+                        onChange={e => { setRecipientSearch(e.target.value); setShowRecipientDropdown(true); }}
+                        onFocus={() => setShowRecipientDropdown(true)}
+                        placeholder="Rechercher des membres..."
+                        className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
+                      {showRecipientDropdown && recipientSearch && (
+                        <div className="absolute z-10 top-full mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                          {members.filter(m => (m.name || '').toLowerCase().includes(recipientSearch.toLowerCase())).slice(0, 10).map(m => {
+                            const selected = selectedRecipients.includes(m.id!);
+                            return (
+                              <button key={m.id} type="button"
+                                onClick={() => {
+                                  setSelectedRecipients(prev =>
+                                    selected ? prev.filter(id => id !== m.id) : [...prev, m.id!]
+                                  );
+                                  setRecipientSearch('');
+                                  setShowRecipientDropdown(false);
+                                }}
+                                className={`w-full text-left p-2 text-xs hover:bg-indigo-50 cursor-pointer flex items-center gap-2 ${selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'}`}>
+                                <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[8px] ${selected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}`}>
+                                  {selected ? '✓' : ''}
+                                </span>
+                                {m.name} — {m.phone || 'Sans téléphone'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {selectedRecipients.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedRecipients.map(id => {
+                          const m = members.find(mm => mm.id === id);
+                          if (!m) return null;
+                          return (
+                            <span key={id} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                              {m.name}
+                              <button type="button" onClick={() => setSelectedRecipients(prev => prev.filter(x => x !== id))}
+                                className="hover:text-indigo-900 cursor-pointer">&times;</button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-slate-400">{selectedRecipients.length} membre(s) sélectionné(s)</p>
+                  </div>
+                  <button onClick={handleSchedule} disabled={scheduling || !scheduledAt || selectedRecipients.length === 0}
                     className="w-full flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all">
-                    <Send className="w-3.5 h-3.5" />
-                    Choisir les destinataires
+                    {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    {scheduling ? 'Programmation...' : `Programmer (${editDays.length} jour${editDays.length > 1 ? 's' : ''}, ${selectedRecipients.length} dst.)`}
                   </button>
                 </>
               )}
