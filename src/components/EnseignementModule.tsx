@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send, FileDown } from 'lucide-react';
+import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send, FileDown, Globe } from 'lucide-react';
 import { Enseignement, EnseignementDay, Member } from '../types';
+import { stripWhatsAppFormatting } from './RichTextEditor';
 
 function markdownToHtml(md: string): string {
   if (!md) return '';
@@ -86,6 +87,13 @@ export default function EnseignementModule({ settings, members, departments }: E
   const [sendMode, setSendMode] = useState<'members' | 'group'>('members');
   const [whatsappGroups, setWhatsappGroups] = useState<{ id: string; name: string; subject?: string }[]>([]);
   const [selectedGroupJid, setSelectedGroupJid] = useState('');
+  const [fbPageId, setFbPageId] = useState('');
+  const [fbPages, setFbPages] = useState<any[]>([]);
+  const [fbSending, setFbSending] = useState(false);
+  const [fbResult, setFbResult] = useState<string | null>(null);
+  const [fbPublishMode, setFbPublishMode] = useState<'single' | 'separate'>('single');
+  const [fbScheduleMode, setFbScheduleMode] = useState(false);
+  const [fbScheduledAt, setFbScheduledAt] = useState('');
 
   useEffect(() => {
     if (scheduleMode) {
@@ -94,6 +102,18 @@ export default function EnseignementModule({ settings, members, departments }: E
       }).catch(() => {});
     }
   }, [scheduleMode]);
+
+  useEffect(() => {
+    if (settings?.facebookToken) {
+      fetch('/api/facebook/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: settings.facebookToken }),
+      }).then(r => r.json()).then(data => {
+        if (data.success && data.pages) setFbPages(data.pages);
+      }).catch(() => {});
+    }
+  }, [settings?.facebookToken]);
 
   useEffect(() => {
     const imported = importFromPastoralAI();
@@ -246,6 +266,57 @@ export default function EnseignementModule({ settings, members, departments }: E
     setScheduling(false);
     setMsg(`${success}/${editDays.length} jour(s) programmé(s)`);
     setTimeout(() => setMsg(''), 4000);
+  };
+
+  const handleFbPublish = async () => {
+    if (!editing || !fbPageId) return;
+    const token = settings?.facebookToken;
+    if (!token) { setFbResult('❌ Token Facebook non configuré'); return; }
+    setFbSending(true);
+    setFbResult(null);
+    try {
+      if (fbPublishMode === 'single') {
+        const allText = editDays.map(d =>
+          `📖 *${d.title}*\n\n${d.text}`
+        ).join('\n\n━━━━━━━━━━━━━━━\n\n');
+        const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n${allText}`;
+        const cleanMessage = stripWhatsAppFormatting(message);
+        const res = await fetch('/api/facebook/post-article', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pageId: fbPageId, message: cleanMessage, accessToken: token,
+            scheduledTime: fbScheduleMode && fbScheduledAt ? fbScheduledAt : undefined,
+          }),
+        });
+        const data = await res.json();
+        setFbResult(data.success ? (data.scheduled ? '✅ Article programmé' : '✅ Publié sur Facebook') : `❌ ${data.error}`);
+      } else {
+        let ok = 0, fail = 0;
+        for (let i = 0; i < editDays.length; i++) {
+          const d = editDays[i];
+          const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n📖 ${d.title}\n\n${d.text}`;
+          const cleanMessage = stripWhatsAppFormatting(message);
+          const dayDate = fbScheduleMode && fbScheduledAt
+            ? new Date(new Date(fbScheduledAt).getTime() + i * 86400000).toISOString()
+            : undefined;
+          const res = await fetch('/api/facebook/post-article', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pageId: fbPageId, message: cleanMessage, accessToken: token,
+              scheduledTime: dayDate,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) ok++; else fail++;
+        }
+        setFbResult(ok > 0 ? `✅ ${ok}/${editDays.length} jour(s) publié(s)` + (fail > 0 ? `, ${fail} échec(s)` : '') : '❌ Échec total');
+      }
+    } catch (err: any) {
+      setFbResult(`❌ Erreur: ${err.message}`);
+    }
+    setFbSending(false);
   };
 
   const addDay = () => {
@@ -549,6 +620,59 @@ export default function EnseignementModule({ settings, members, departments }: E
                 <p>💡 Les jours seront espacés de 24h à partir de la date choisie.</p>
                 <p>📱 Envoi via WhatsApp (membres individuels programmés, groupe immédiat).</p>
               </div>
+            </div>
+
+            {/* Facebook */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-600 p-4 space-y-3">
+              <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-blue-600" />
+                Publication Facebook
+              </h3>
+              {!settings?.facebookToken ? (
+                <p className="text-[10px] text-amber-600">Token Facebook non configuré. Allez dans <strong>Paramètres</strong>.</p>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-medium text-slate-600 dark:text-slate-400 block">Page Facebook</label>
+                    <select value={fbPageId} onChange={e => setFbPageId(e.target.value)}
+                      className="w-full text-xs p-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600">
+                      <option value="">Sélectionnez une page</option>
+                      {fbPages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex gap-1">
+                    <button type="button" onClick={() => setFbPublishMode('single')}
+                      className={`flex-1 text-[10px] py-1.5 px-2 border rounded-md font-semibold ${fbPublishMode === 'single' ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'}`}>
+                      Article unique
+                    </button>
+                    <button type="button" onClick={() => setFbPublishMode('separate')}
+                      className={`flex-1 text-[10px] py-1.5 px-2 border rounded-md font-semibold ${fbPublishMode === 'separate' ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'}`}>
+                      1 post/jour
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                    <input type="checkbox" checked={fbScheduleMode} onChange={e => setFbScheduleMode(e.target.checked)} className="accent-blue-600" />
+                    Programmer
+                  </label>
+                  {fbScheduleMode && (
+                    <input type="datetime-local" value={fbScheduledAt} onChange={e => setFbScheduledAt(e.target.value)}
+                      className="w-full text-xs p-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600" />
+                  )}
+                  {fbScheduleMode && fbPublishMode === 'separate' && (
+                    <p className="text-[10px] text-slate-400">Les jours seront espacés de 24h à partir de cette date.</p>
+                  )}
+                  <button onClick={handleFbPublish} disabled={fbSending || !fbPageId}
+                    className="w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all">
+                    {fbSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+                    {fbSending ? 'Publication...' : fbScheduleMode ? 'Programmer' : `Publier sur Facebook`}
+                  </button>
+                  {fbResult && (
+                    <div className={`p-2 rounded text-[10px] ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                      {fbResult}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Stats */}
