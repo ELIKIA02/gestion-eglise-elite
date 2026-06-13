@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe, ArrowUp, ArrowDown } from 'lucide-react';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe, ArrowUp, ArrowDown, Bold, Italic, Strikethrough } from 'lucide-react';
 import PollsModule from './PollsModule';
 import RichTextEditor, { formatForFacebook } from './RichTextEditor';
 
@@ -1122,13 +1122,11 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                 </button>
               </div>
 
-              <RichTextEditor
+              <FbWysiwygEditor
                 value={fbMessage}
                 onChange={setFbMessage}
                 label={fbPostType === 'article' ? 'Message de l\'article' : 'Message'}
                 placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
-                target="facebook"
-                rows={fbPostType === 'article' ? 12 : 8}
               />
 
               {/* Images (pour article uniquement) */}
@@ -1299,6 +1297,75 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         </div>
       </div>
     )}
+    </div>
+  );
+}
+
+// Éditeur WYSIWYG simple pour Facebook (pas de caractères Unicode)
+function FbWysiwygEditor({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label?: string; placeholder?: string }) {
+  const divRef = useRef<HTMLDivElement>(null);
+  const inited = useRef(false);
+
+  useEffect(() => {
+    const el = divRef.current;
+    if (!el || inited.current) return;
+    inited.current = true;
+    const mathRanges: [number, number, number][] = [
+      [0x1D400, 0x1D419, 0x41], [0x1D41A, 0x1D433, 0x61],
+      [0x1D434, 0x1D44D, 0x41], [0x1D44E, 0x1D467, 0x61],
+      [0x1D468, 0x1D481, 0x41], [0x1D482, 0x1D49B, 0x61],
+      [0x1D670, 0x1D689, 0x41], [0x1D68A, 0x1D6A3, 0x61],
+      [0x1D7CE, 0x1D7D7, 0x30],
+    ];
+    let clean = '';
+    for (const c of value) {
+      const cp = c.codePointAt(0)!;
+      let found = false;
+      for (const [start, end, base] of mathRanges) {
+        if (cp >= start && cp <= end) { clean += String.fromCodePoint(base + (cp - start)); found = true; break; }
+      }
+      if (!found) clean += c;
+    }
+    el.innerText = clean;
+  }, []);
+
+  const getText = () => divRef.current?.innerText || '';
+
+  const exec = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+    onChange(getText());
+    divRef.current?.focus();
+  };
+
+  const handleInput = () => onChange(getText());
+
+  return (
+    <div className="space-y-1">
+      {label && (
+        <div className="flex justify-between items-center">
+          <label className="text-xs font-semibold text-slate-600 block">{label}</label>
+          <span className="text-[10px] text-slate-400">{value.length} car.</span>
+        </div>
+      )}
+      <div className="flex gap-1 pb-1 flex-wrap">
+        <button type="button" onClick={() => exec('bold')} title="Gras"
+          className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
+        <button type="button" onClick={() => exec('italic')} title="Italique"
+          className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
+        <span className="w-px bg-slate-200 mx-0.5 self-stretch" />
+        <button type="button" onClick={() => exec('strikeThrough')} title="Barré"
+          className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
+      </div>
+      <div
+        ref={divRef}
+        contentEditable
+        role="textbox"
+        aria-multiline="true"
+        data-placeholder={placeholder || ''}
+        onInput={handleInput}
+        onKeyUp={handleInput}
+        className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200 min-h-[200px] overflow-y-auto whitespace-pre-wrap [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-slate-400"
+      />
     </div>
   );
 }
