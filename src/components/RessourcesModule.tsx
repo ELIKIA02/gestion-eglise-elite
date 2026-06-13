@@ -9,9 +9,10 @@ interface RessourcesModuleProps {
   members: Member[];
   settings: ChurchSettings | null;
   departments: Department[];
+  onNavigate?: (tab: string, text?: string) => void;
 }
 
-export default function RessourcesModule({ members, settings, departments }: RessourcesModuleProps) {
+export default function RessourcesModule({ members, settings, departments, onNavigate }: RessourcesModuleProps) {
   const [subTab, setSubTab] = useState<'enseignement' | 'bibliotheque' | 'documents'>('enseignement');
 
   return (
@@ -42,7 +43,7 @@ export default function RessourcesModule({ members, settings, departments }: Res
         </button>
       </div>
 
-      {subTab === 'enseignement' && <EnseignementModule settings={settings} members={members} departments={departments} />}
+      {subTab === 'enseignement' && <EnseignementModule settings={settings} members={members} departments={departments} onNavigate={onNavigate} />}
       {subTab === 'bibliotheque' && <LibraryModule members={members} />}
       {subTab === 'documents' && <DocumentsModule settings={settings} members={members} />}
     </div>

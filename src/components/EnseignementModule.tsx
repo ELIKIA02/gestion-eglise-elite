@@ -65,9 +65,10 @@ interface EnseignementModuleProps {
   settings: any;
   members: Member[];
   departments: any[];
+  onNavigate?: (tab: string, text?: string) => void;
 }
 
-export default function EnseignementModule({ settings, members, departments }: EnseignementModuleProps) {
+export default function EnseignementModule({ settings, members, departments, onNavigate }: EnseignementModuleProps) {
   const [enseignements, setEnseignements] = useState<Enseignement[]>(loadAll);
   const [view, setView] = useState<'list' | 'edit'>('list');
   const [editing, setEditing] = useState<Enseignement | null>(null);
@@ -179,6 +180,15 @@ export default function EnseignementModule({ settings, members, departments }: E
     saveAll(all);
     setEnseignements(all);
     if (editing?.id === id) setView('list');
+  };
+
+  const handleSendToComms = () => {
+    if (!editing) return;
+    syncWysiwyg();
+    const text = editDays.map((d, i) =>
+      `*Jour ${i + 1} : ${d.title}*\n${d.text}`
+    ).join('\n\n');
+    onNavigate?.('comms', `📖 *${editTitle}*\n\n${text}`);
   };
 
   const handleSchedule = async () => {
@@ -438,10 +448,10 @@ export default function EnseignementModule({ settings, members, departments }: E
                 <>
                   <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
                     className="w-full text-xs p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
-                  <button onClick={handleSchedule} disabled={scheduling || !scheduledAt}
+                  <button onClick={handleSendToComms} disabled={!onNavigate}
                     className="w-full flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all">
-                    {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    {scheduling ? 'Programmation...' : `Programmer (${editDays.length} jour${editDays.length > 1 ? 's' : ''})`}
+                    <Send className="w-3.5 h-3.5" />
+                    Choisir les destinataires
                   </button>
                 </>
               )}
