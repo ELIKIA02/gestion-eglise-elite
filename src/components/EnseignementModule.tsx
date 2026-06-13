@@ -281,11 +281,13 @@ export default function EnseignementModule({ settings, members, departments }: E
         ).join('\n\n━━━━━━━━━━━━━━━\n\n');
         const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n${allText}`;
         const cleanMessage = stripWhatsAppFormatting(message);
+        const imageUrls = editDays.map(d => d.imageUrl).filter(Boolean) as string[];
         const res = await fetch('/api/facebook/post-article', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            pageId: fbPageId, message: cleanMessage, accessToken: token,
+            pageId: fbPageId, message: cleanMessage, imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+            accessToken: token,
             scheduledTime: fbScheduleMode && fbScheduledAt ? fbScheduledAt : undefined,
           }),
         });
@@ -304,7 +306,9 @@ export default function EnseignementModule({ settings, members, departments }: E
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pageId: fbPageId, message: cleanMessage, accessToken: token,
+              pageId: fbPageId, message: cleanMessage,
+              imageUrls: d.imageUrl ? [d.imageUrl] : undefined,
+              accessToken: token,
               scheduledTime: dayDate,
             }),
           });
@@ -484,6 +488,43 @@ export default function EnseignementModule({ settings, members, departments }: E
             }}
               placeholder="Titre du jour"
               className="w-full text-xs font-semibold p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
+
+            {/* Image du jour */}
+            <div className="flex items-center gap-2">
+              <input type="text" value={currentDay.imageUrl || ''} onChange={e => {
+                const newDays = [...editDays];
+                newDays[editingDayIndex] = { ...newDays[editingDayIndex], imageUrl: e.target.value };
+                setEditDays(newDays);
+              }}
+                placeholder="URL image (optionnelle)..." className="flex-1 text-[10px] p-2 border border-slate-200 rounded-lg focus:outline-indigo-600 bg-white" />
+              <label className="shrink-0 p-2 rounded-lg border border-slate-200 hover:bg-slate-100 cursor-pointer text-[10px] text-slate-500">
+                <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const form = new FormData();
+                  form.append('image', file);
+                  const res = await fetch('/api/upload-image', { method: 'POST', body: form });
+                  const data = await res.json();
+                  if (data.success) {
+                    const newDays = [...editDays];
+                    newDays[editingDayIndex] = { ...newDays[editingDayIndex], imageUrl: data.url };
+                    setEditDays(newDays);
+                  }
+                }} />
+                Upload
+              </label>
+            </div>
+            {currentDay.imageUrl && (
+              <div className="relative inline-block mt-1">
+                <img src={currentDay.imageUrl} alt="" className="max-h-24 rounded-lg border border-slate-200" />
+                <button type="button" onClick={() => {
+                  const newDays = [...editDays];
+                  newDays[editingDayIndex] = { ...newDays[editingDayIndex], imageUrl: undefined };
+                  setEditDays(newDays);
+                }}
+                  className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 cursor-pointer shadow text-[10px] w-4 h-4 flex items-center justify-center">×</button>
+              </div>
+            )}
 
             {/* Formatting toolbar */}
             <div className="flex gap-1 pb-1 flex-wrap">

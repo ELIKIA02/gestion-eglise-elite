@@ -111,6 +111,11 @@ async function startServer() {
   app.use(express.json({ limit: '5mb' }));
   app.use(express.urlencoded({ extended: true }));
 
+  // Serve uploaded files
+  const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  app.use('/uploads', express.static(UPLOADS_DIR));
+
   app.use((_req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -612,6 +617,20 @@ async function startServer() {
     }
   });
 
+  // Upload image pour Enseignement
+  app.post("/api/upload-image", upload.single('image'), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ success: false, error: "Image requise" });
+      const ext = path.extname(file.originalname) || '.jpg';
+      const filename = `ens_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`;
+      fs.writeFileSync(path.join(UPLOADS_DIR, filename), file.buffer);
+      res.json({ success: true, url: `/uploads/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // --- Facebook Graph API (avancé) ---
 
   // Upload d'image vers Facebook Page → retourne l'ID photo
@@ -649,18 +668,54 @@ async function startServer() {
     return photoIds.map(id => ({ media_fbid: id }));
   }
 
+  async function uploadLocalImageToFacebook(imageUrl: string, pageId: string, accessToken: string): Promise<string | null> {
+    try {
+      let buffer: Buffer;
+      if (imageUrl.startsWith('/uploads/')) {
+        const localPath = path.join(process.cwd(), imageUrl);
+        if (!fs.existsSync(localPath)) return null;
+        buffer = fs.readFileSync(localPath);
+      } else {
+        const resp = await fetch(imageUrl);
+        buffer = Buffer.from(await resp.arrayBuffer());
+      }
+      const boundary = '----FormBoundary' + Math.random().toString(36).slice(2);
+      const bodyParts: string[] = [];
+      bodyParts.push(`--${boundary}\r\nContent-Disposition: form-data; name="source"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
+      const bodyStart = Buffer.from(bodyParts.join(''), 'utf-8');
+      const bodyEnd = Buffer.from(`\r\n--${boundary}\r\nContent-Disposition: form-data; name="access_token"\r\n\r\n${accessToken}\r\n--${boundary}--\r\n`, 'utf-8');
+      const fbBody = Buffer.concat([bodyStart, buffer, bodyEnd]);
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+        body: fbBody,
+      });
+      const data: any = await fbRes.json();
+      return data.id || null;
+    } catch { return null; }
+  }
+
   app.post("/api/facebook/post-article", async (req, res) => {
     try {
-      const { pageId, message, photoIds, scheduledTime, accessToken } = req.body;
+      const { pageId, message, photoIds, imageUrls, scheduledTime, accessToken } = req.body;
       if (!pageId || !message || !accessToken) {
         return res.status(400).json({ success: false, error: "pageId, message et accessToken requis" });
       }
 
       const body: Record<string, any> = { message, access_token: accessToken };
 
-      // Si images uploadées → les attacher en album
-      if (Array.isArray(photoIds) && photoIds.length > 0) {
-        body.attached_media = JSON.stringify(buildAttachedMedia(photoIds));
+      // Collecter tous les IDs (photoIds déjà sur Facebook + imageUrls locales à uploader)
+      const allPhotoIds: string[] = Array.isArray(photoIds) ? [...photoIds] : [];
+      if (Array.isArray(imageUrls)) {
+        for (const url of imageUrls) {
+          if (!url) continue;
+          const pid = await uploadLocalImageToFacebook(url, pageId, accessToken);
+          if (pid) allPhotoIds.push(pid);
+        }
+      }
+
+      if (allPhotoIds.length > 0) {
+        body.attached_media = JSON.stringify(buildAttachedMedia(allPhotoIds));
       }
 
       // Mode programmé

@@ -129,6 +129,7 @@ export interface EnseignementDay {
   day: number;
   title: string;
   text: string;
+  imageUrl?: string;
 }
 
 export interface Enseignement {
