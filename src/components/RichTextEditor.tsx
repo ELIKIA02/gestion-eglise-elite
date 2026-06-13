@@ -168,7 +168,7 @@ export default function RichTextEditor({
       </div>
       <textarea ref={textRef} required value={value} onChange={e => onChange(e.target.value)}
         rows={rows} placeholder={placeholder}
-        className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
+        className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200 min-h-[200px]" />
       {imageBase64 && onImageClear && (
         <div className="relative inline-block mt-1">
           <img src={imageBase64} alt="Aperçu" className="max-h-32 rounded-lg border border-slate-200" />

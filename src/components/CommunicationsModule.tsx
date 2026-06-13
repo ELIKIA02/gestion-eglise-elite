@@ -867,7 +867,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               label="Message *"
               placeholder="Écrivez le message..."
               target="whatsapp"
-              rows={5}
+              rows={10}
               showImageUpload={messageType === 'WhatsApp'}
               imageBase64={imageBase64}
               onImageUpload={handleImageUpload}
@@ -1096,7 +1096,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                 label={fbPostType === 'article' ? 'Message de l\'article' : 'Message'}
                 placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
                 target="facebook"
-                rows={fbPostType === 'article' ? 6 : 4}
+                rows={fbPostType === 'article' ? 12 : 8}
               />
 
               {/* Images (pour article uniquement) */}
