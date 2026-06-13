@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Plus, Edit2, Trash2, Clock, Calendar, CheckCircle2, Bold, Italic, Strikethrough, Code, Type, ArrowUp, ArrowDown, Loader2, Copy, Send, FileDown, Globe } from 'lucide-react';
 import { Enseignement, EnseignementDay, Member } from '../types';
-import { stripWhatsAppFormatting } from './RichTextEditor';
+import { whatsAppToFacebook } from './RichTextEditor';
 
 function markdownToHtml(md: string): string {
   if (!md) return '';
@@ -280,7 +280,7 @@ export default function EnseignementModule({ settings, members, departments }: E
           `📖 *${d.title}*\n\n${d.text}`
         ).join('\n\n━━━━━━━━━━━━━━━\n\n');
         const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n${allText}`;
-        const cleanMessage = stripWhatsAppFormatting(message);
+        const cleanMessage = whatsAppToFacebook(message);
         const imageUrls = editDays.map(d => d.imageUrl).filter(Boolean) as string[];
         const res = await fetch('/api/facebook/post-article', {
           method: 'POST',
@@ -298,7 +298,7 @@ export default function EnseignementModule({ settings, members, departments }: E
         for (let i = 0; i < editDays.length; i++) {
           const d = editDays[i];
           const message = `${editTitle}${editTheme ? ` — ${editTheme}` : ''}\n\n📖 ${d.title}\n\n${d.text}`;
-          const cleanMessage = stripWhatsAppFormatting(message);
+          const cleanMessage = whatsAppToFacebook(message);
           const dayDate = fbScheduleMode && fbScheduledAt
             ? new Date(new Date(fbScheduledAt).getTime() + i * 86400000).toISOString()
             : undefined;

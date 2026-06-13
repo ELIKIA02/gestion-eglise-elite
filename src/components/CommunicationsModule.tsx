@@ -3,7 +3,7 @@ import { collection, addDoc, db, handleFirestoreError, OperationType } from '../
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
 import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe, ArrowUp, ArrowDown } from 'lucide-react';
 import PollsModule from './PollsModule';
-import RichTextEditor, { stripWhatsAppFormatting } from './RichTextEditor';
+import RichTextEditor, { whatsAppToFacebook } from './RichTextEditor';
 
 interface ScheduledMessage {
   id: string;
@@ -542,7 +542,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         }
       }
 
-      const cleanMessage = stripWhatsAppFormatting(fbMessage);
+      const cleanMessage = whatsAppToFacebook(fbMessage);
       const res = await fetch('/api/facebook/post-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

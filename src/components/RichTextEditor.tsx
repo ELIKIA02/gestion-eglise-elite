@@ -67,6 +67,16 @@ export function stripWhatsAppFormatting(text: string): string {
     .replace(/`(.+?)`/g, '$1');
 }
 
+export function whatsAppToFacebook(text: string): string {
+  return text
+    .replace(/\*_(.+?)_\*/g, (_, m) => toFbBoldItalic(m))
+    .replace(/\*(.+?)\*/g, (_, m) => toFbBold(m))
+    .replace(/_(.+?)_/g, (_, m) => toFbItalic(m))
+    .replace(/~(.+?)~/g, (_, m) => toFbStrike(m))
+    .replace(/```(.+?)```/g, (_, m) => toFbMono(m))
+    .replace(/`(.+?)`/g, (_, m) => toFbMono(m));
+}
+
 export default function RichTextEditor({
   value, onChange, placeholder, rows = 5, label, target = 'whatsapp',
   showImageUpload, imageBase64, onImageUpload, onImageClear,
