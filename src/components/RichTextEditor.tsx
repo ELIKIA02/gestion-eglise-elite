@@ -68,8 +68,26 @@ export function stripWhatsAppFormatting(text: string): string {
     .replace(/`(.+?)`/g, '$1');
 }
 
+// Convertit les caractères Unicode Mathématiques (bold, italic, mono, etc.) en ASCII simple
+function unicodeMathToAscii(text: string): string {
+  const ranges: [number, number, number][] = [
+    [0x1D400, 0x1D419, 0x41], [0x1D41A, 0x1D433, 0x61], // Bold
+    [0x1D434, 0x1D44D, 0x41], [0x1D44E, 0x1D467, 0x61], // Italic
+    [0x1D468, 0x1D481, 0x41], [0x1D482, 0x1D49B, 0x61], // Bold Italic
+    [0x1D670, 0x1D689, 0x41], [0x1D68A, 0x1D6A3, 0x61], // Monospace
+    [0x1D7CE, 0x1D7D7, 0x30], // Bold digits
+  ];
+  return text.split('').map(c => {
+    const code = c.charCodeAt(0);
+    for (const [start, end, base] of ranges) {
+      if (code >= start && code <= end) return String.fromCharCode(base + (code - start));
+    }
+    return c;
+  }).join('');
+}
+
 export function formatForFacebook(text: string): string {
-  let result = text;
+  let result = unicodeMathToAscii(text);
   // *bold* → MAJUSCULES
   result = result.replace(/\*(.+?)\*/g, (_, m) => m.toUpperCase());
   // _italic_ → clean (first letter uppercase for slight emphasis)
