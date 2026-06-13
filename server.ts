@@ -763,6 +763,38 @@ async function startServer() {
     }
   });
 
+  // Déboguer un token (vérifier permissions et type)
+  app.post("/api/facebook/debug-token", async (req, res) => {
+    try {
+      const { accessToken } = req.body;
+      if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
+      // Vérifier le type de token (user vs page)
+      const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,permissions&access_token=${accessToken}`);
+      const meData: any = await meRes.json();
+      // Vérifier si c'est un token de page
+      const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
+      const accountsData: any = await accountsRes.json();
+      const info: any = { type: 'unknown', id: meData.id, name: meData.name, permissions: [], pages: [], error: null };
+      if (meData.error) {
+        info.error = meData.error.message;
+      } else {
+        info.id = meData.id;
+        info.name = meData.name;
+        info.permissions = (meData.permissions?.data || []).map((p: any) => ({ permission: p.permission, status: p.status }));
+        info.type = 'user';
+      }
+      if (accountsData.data) {
+        info.type = 'page';
+        info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
+      } else if (accountsData.error) {
+        info.error = accountsData.error.message;
+      }
+      res.json({ success: true, info });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Serve Frontend Assets (production only — dev uses Vite on port 5173)
   if (!isDev) {
     const distPath = path.join(process.cwd(), "dist");

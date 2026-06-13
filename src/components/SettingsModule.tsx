@@ -18,6 +18,8 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   const [reportHeader, setReportHeader] = useState('');
   const [mistralApiKey, setMistralApiKey] = useState('');
   const [facebookToken, setFacebookToken] = useState('');
+  const [fbDebugResult, setFbDebugResult] = useState<any>(null);
+  const [fbDebugging, setFbDebugging] = useState(false);
   const [cachetBase64, setCachetBase64] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [liturgicalSeasons, setLiturgicalSeasons] = useState('');
@@ -89,6 +91,28 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setNotifReminderDays(settings.notifications?.reminderDays ?? 3);
     }
   }, [settings]);
+
+  const handleFbDebug = async () => {
+    if (!facebookToken.trim()) return;
+    setFbDebugging(true);
+    setFbDebugResult(null);
+    try {
+      const res = await fetch('/api/facebook/debug-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: facebookToken.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFbDebugResult({ type: 'info', info: data.info });
+      } else {
+        setFbDebugResult({ type: 'error', message: data.error || 'Erreur de vérification' });
+      }
+    } catch (err: any) {
+      setFbDebugResult({ type: 'error', message: err.message });
+    }
+    setFbDebugging(false);
+  };
 
   // Handle Save
   const handleSave = async (e: React.FormEvent) => {
@@ -436,10 +460,53 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           {/* Facebook Page Token */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Token d'accès Facebook Page </label>
-            <input type="password" value={facebookToken} onChange={e => setFacebookToken(e.target.value)}
-              placeholder="EAAB... (token longue durée)"
-              className="w-full text-xs p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-indigo-600 dark:focus:outline-indigo-400 font-mono" />
-            <p className="text-[10px] text-slate-400">Généré depuis <strong>Facebook Developers</strong> → Outils Graph API → Long-lived Page Token. Permet de publier sur la page.</p>
+            <div className="flex gap-2">
+              <input type="password" value={facebookToken} onChange={e => setFacebookToken(e.target.value)}
+                placeholder="EAAB... (token longue durée)"
+                className="flex-1 text-xs p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-indigo-600 dark:focus:outline-indigo-400 font-mono" />
+              <button type="button" onClick={handleFbDebug} disabled={fbDebugging || !facebookToken.trim()}
+                className="px-3 py-2 text-xs font-semibold rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/30 disabled:opacity-50 cursor-pointer whitespace-nowrap">
+                {fbDebugging ? '...' : 'Vérifier'}
+              </button>
+            </div>
+            {fbDebugResult && (
+              <div className={`text-[10px] p-2 rounded border ${fbDebugResult.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 dark:bg-slate-700 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
+                {fbDebugResult.type === 'error' ? (
+                  <p>❌ {fbDebugResult.message}</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    <p><strong>Type :</strong> {fbDebugResult.info?.type === 'page' ? '✅ Token Page' : '⚠️ Token Utilisateur'}</p>
+                    {fbDebugResult.info?.name && <p><strong>Nom :</strong> {fbDebugResult.info.name}</p>}
+                    {fbDebugResult.info?.pages?.length > 0 && (
+                      <p><strong>Pages :</strong> {fbDebugResult.info.pages.map((p: any) => p.name).join(', ')}</p>
+                    )}
+                    {fbDebugResult.info?.permissions?.length > 0 && (
+                      <div>
+                        <strong>Permissions :</strong>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {fbDebugResult.info.permissions.map((p: any) => (
+                            <span key={p.permission} className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${p.status === 'granted' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                              {p.permission} {p.status === 'granted' ? '✓' : '✗'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {fbDebugResult.info?.error && <p className="text-red-600">⚠️ {fbDebugResult.info.error}</p>}
+                    <div className="border-t border-slate-200 dark:border-slate-600 pt-1 mt-1 text-[9px] text-slate-400">
+                      {fbDebugResult.info?.type === 'page'
+                        ? '✅ Token Page valide. Tu peux publier sur Facebook.'
+                        : fbDebugResult.info?.type === 'user'
+                          ? '⚠️ C\'est un token Utilisateur. Suis la procédure : tape me/accounts dans l\'Explorateur API Graph pour obtenir le token de ta Page.'
+                          : '❌ Token invalide ou expiré.'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-[10px] text-slate-400">
+              Colle le <strong>token de ta Page</strong> (pas le token utilisateur). Obtiens-le via l'Explorateur API Graph → tape <code className="bg-slate-100 dark:bg-slate-600 px-1 rounded">me/accounts</code> → copie le <code className="bg-slate-100 dark:bg-slate-600 px-1 rounded">access_token</code> de ta page.
+            </p>
           </div>
 
           {/* Theme Configuration */}
