@@ -68,9 +68,19 @@ export function stripWhatsAppFormatting(text: string): string {
     .replace(/`(.+?)`/g, '$1');
 }
 
-// Pour Facebook : garder le texte propre sans caractères Unicode exotiques mal supportés
 export function formatForFacebook(text: string): string {
-  return stripWhatsAppFormatting(text);
+  let result = text;
+  // *bold* → MAJUSCULES
+  result = result.replace(/\*(.+?)\*/g, (_, m) => m.toUpperCase());
+  // _italic_ → clean (first letter uppercase for slight emphasis)
+  result = result.replace(/_(.+?)_/g, (_, m) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase());
+  // *_bold italic_* → MAJUSCULES
+  result = result.replace(/\*_(.+?)_\*/g, (_, m) => m.toUpperCase());
+  // ~strike~, ```code```, `code` → clean
+  result = result.replace(/~(.+?)~/g, '$1');
+  result = result.replace(/```(.+?)```/g, '$1');
+  result = result.replace(/`(.+?)`/g, '$1');
+  return result;
 }
 
 export default function RichTextEditor({
@@ -97,9 +107,9 @@ export default function RichTextEditor({
   const toUpper = (t: string) => t.toUpperCase();
   const toLower = (t: string) => t.toLowerCase();
 
-  const formatActions: Record<string, (text: string) => string> = target === 'facebook'
-    ? { bold: toFbBold, italic: toFbItalic, boldItalic: toFbBoldItalic, strike: toFbStrike, mono: toFbMono, boldUpper: toFbBoldUppercase }
-    : { bold: toWaBold, italic: toWaItalic, boldItalic: toWaBoldItalic, strike: toWaStrike, mono: toWaMono, boldUpper: toWaBoldUppercase };
+  const formatActions: Record<string, (text: string) => string> = {
+    bold: toWaBold, italic: toWaItalic, boldItalic: toWaBoldItalic, strike: toWaStrike, mono: toWaMono, boldUpper: toWaBoldUppercase
+  };
 
   return (
     <div className="space-y-1">
