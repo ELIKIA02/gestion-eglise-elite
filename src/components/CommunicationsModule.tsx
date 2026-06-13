@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe } from 'lucide-react';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe, ArrowUp, ArrowDown } from 'lucide-react';
 import PollsModule from './PollsModule';
+import RichTextEditor, { stripWhatsAppFormatting } from './RichTextEditor';
 
 interface ScheduledMessage {
   id: string;
@@ -76,7 +77,6 @@ export default function CommunicationsModule({ comms, members, departments, sett
   const [whatsappGroups, setWhatsappGroups] = useState<{ id: string; name: string }[]>([]);
   const [selectedGroupJid, setSelectedGroupJid] = useState('');
   const [pinnedGroups, setPinnedGroups] = useState<string[]>([]);
-  const textRef = useRef<HTMLTextAreaElement>(null);
 
 const [waStatus, setWaStatus] = useState<string>('checking');
 const [waQR, setWaQR] = useState<string | null>(null);
@@ -443,20 +443,6 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
     return [...pinned, ...rest];
   }, [whatsappGroups, pinnedGroups]);
 
-  const formatText = (before: string, after: string) => {
-    const ta = textRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = textBody.substring(start, end);
-    const newText = textBody.substring(0, start) + before + selected + after + textBody.substring(end);
-    setTextBody(newText);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    });
-  };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -469,21 +455,6 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const clearImage = () => {
     setImageBase64(null);
     setImageFile(null);
-  };
-
-  const transformSelection = (transform: (text: string) => string) => {
-    const ta = textRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    if (start === end) return;
-    const selected = textBody.substring(start, end);
-    const transformed = transform(selected);
-    setTextBody(textBody.substring(0, start) + transformed + textBody.substring(end));
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start, start + transformed.length);
-    });
   };
 
   const statusIcon = (s: string) => {
@@ -537,12 +508,13 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         }
       }
 
+      const cleanMessage = stripWhatsAppFormatting(fbMessage);
       const res = await fetch('/api/facebook/post-article', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pageId: fbPageId,
-          message: fbMessage,
+          message: cleanMessage,
           photoIds: photoIds.length > 0 ? photoIds : undefined,
           accessToken: token,
           scheduledTime: fbScheduleMode && fbScheduledAt ? fbScheduledAt : undefined,
@@ -855,51 +827,18 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               <input type="text" required value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="Ex: Rappel culte" className="w-full text-xs p-2 border border-slate-200 rounded-md focus:outline-indigo-600" />
             </div>
-            <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-slate-600 block">Message *</label>
-                <span className="text-[10px] text-slate-400">{textBody.length} car.</span>
-              </div>
-              <div className="flex gap-1 pb-1">
-                <button type="button" onClick={() => formatText('*', '*')} title="Gras"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
-                <button type="button" onClick={() => formatText('_', '_')} title="Italique"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
-                <button type="button" onClick={() => formatText('*_', '_*')} title="Gras-italique"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Type className="w-3.5 h-3.5" /></button>
-                <span className="w-px bg-slate-200 mx-0.5" />
-                <button type="button" onClick={() => transformSelection(t => t.toUpperCase())} title="Majuscule"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2">A<ArrowUp className="w-3 h-3 inline" /></button>
-                <button type="button" onClick={() => transformSelection(t => t.toLowerCase())} title="Minuscule"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer text-[10px] leading-none px-2">a<ArrowDown className="w-3 h-3 inline" /></button>
-                <button type="button" onClick={() => transformSelection(t => `*${t.toUpperCase()}*`)} title="Majuscule gras"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer font-bold text-[10px] leading-none px-2"><Bold className="w-3 h-3 inline" />A<ArrowUp className="w-3 h-3 inline" /></button>
-                <span className="w-px bg-slate-200 mx-0.5" />
-                <button type="button" onClick={() => formatText('~', '~')} title="Barré"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
-                <button type="button" onClick={() => formatText('```', '```')} title="Monospace"
-                  className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer"><Code className="w-3.5 h-3.5" /></button>
-                <div className="flex-1" />
-                {messageType === 'WhatsApp' && (
-                  <label className="p-1.5 rounded border border-slate-200 hover:bg-slate-100 cursor-pointer" title="Ajouter une image">
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                    <Image className="w-3.5 h-3.5" />
-                  </label>
-                )}
-              </div>
-              <textarea ref={textRef} required value={textBody} onChange={e => setTextBody(e.target.value)}
-                rows={5} placeholder="Écrivez le message..."
-                className="w-full text-xs p-2 border border-slate-200 rounded-md focus:outline-indigo-600" />
-              {imageBase64 && (
-                <div className="relative inline-block mt-2">
-                  <img src={imageBase64} alt="Aperçu" className="max-h-32 rounded-lg border border-slate-200" />
-                  <button type="button" onClick={clearImage}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 cursor-pointer shadow">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
+            <RichTextEditor
+              value={textBody}
+              onChange={setTextBody}
+              label="Message *"
+              placeholder="Écrivez le message..."
+              target="whatsapp"
+              rows={5}
+              showImageUpload={messageType === 'WhatsApp'}
+              imageBase64={imageBase64}
+              onImageUpload={handleImageUpload}
+              onImageClear={clearImage}
+            />
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-150 text-[11px] text-slate-600 space-y-1.5">
               <div className="flex items-center justify-between">
                 {sendMode === 'members' ? (
@@ -1117,16 +1056,14 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                 </button>
               </div>
 
-              {/* Message */}
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">
-                  Message {fbPostType === 'article' ? 'de l\'article' : ''}
-                  <span className="text-[10px] text-slate-400 ml-1">({fbMessage.length} car.)</span>
-                </label>
-                <textarea value={fbMessage} onChange={e => setFbMessage(e.target.value)} rows={fbPostType === 'article' ? 6 : 4}
-                  placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
-                  className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
-              </div>
+              <RichTextEditor
+                value={fbMessage}
+                onChange={setFbMessage}
+                label={fbPostType === 'article' ? 'Message de l\'article' : 'Message'}
+                placeholder={fbPostType === 'article' ? "Rédigez le contenu de votre article…" : "Écrivez le contenu de votre publication…"}
+                target="facebook"
+                rows={fbPostType === 'article' ? 6 : 4}
+              />
 
               {/* Images (pour article uniquement) */}
               {fbPostType === 'article' && (
