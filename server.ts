@@ -781,16 +781,21 @@ async function startServer() {
       const meData: any = await meRes.json();
       results.tokenIdentity = meData;
 
-      // 2) Essayer de lire le feed (pages_read_engagement)
-      const feedRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed?limit=1&access_token=${accessToken}`);
-      const feedData: any = await feedRes.json();
-      results.canReadFeed = !feedData.error;
-      results.feedReadDetail = feedData.error ? feedData.error.message : 'OK';
-      // Essayer aussi /feed avec un GET via /{page-id}/published_posts
-      const pubRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/published_posts?limit=1&access_token=${accessToken}`);
-      const pubData: any = await pubRes.json();
-      results.canReadPublishedPosts = !pubData.error;
-      results.pubPostsDetail = pubData.error ? pubData.error.message : 'OK';
+      // 2) Essayer de lire le feed (pages_read_engagement) — test avec plusieurs endpoints
+      const feedTests = [
+        { name: 'feed v25', url: `https://graph.facebook.com/v25.0/${pageId}/feed?limit=1&access_token=${accessToken}` },
+        { name: 'feed v19', url: `https://graph.facebook.com/v19.0/${pageId}/feed?limit=1&access_token=${accessToken}` },
+        { name: 'published_posts v25', url: `https://graph.facebook.com/v25.0/${pageId}/published_posts?limit=1&access_token=${accessToken}` },
+        { name: 'posts v25', url: `https://graph.facebook.com/v25.0/${pageId}/posts?limit=1&access_token=${accessToken}` },
+      ];
+      const feedResults: any = {};
+      for (const t of feedTests) {
+        const r = await fetch(t.url);
+        const d: any = await r.json();
+        feedResults[t.name] = d.error ? d.error.message : 'OK';
+      }
+      results.feedTests = feedResults;
+      results.canReadFeed = Object.values(feedResults).some((v: any) => v === 'OK');
 
       // 3) Essayer de publier
       const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {

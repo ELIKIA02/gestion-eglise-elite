@@ -508,8 +508,9 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         const missing = data.summary.missing.length > 0 ? `\n❌ Manque: ${data.summary.missing.join(', ')}` : '';
         const dt = data.debugToken?.data;
         const scopes = dt?.scopes?.join(', ') || 'N/A';
+        const feedDetails = data.feedTests ? Object.entries(data.feedTests).map(([k, v]) => `   ${k}: ${v}`).join('\n') : '';
         setFbResult(
-          `🔍 Token: ${data.tokenIdentity?.name || '?'}\n✅ Pages_read_engagement: ${data.canReadFeed ? 'OUI' : 'NON'}\n   Détail feed: ${data.feedReadDetail || '?'}\n✅ Pages_manage_posts: ${data.canPublish ? 'OUI' : 'NON'}\n📋 Scopes (debug_token): ${scopes}\nPermissions détectées: ${perms}${missing}`
+          `🔍 Token: ${data.tokenIdentity?.name || '?'}\n✅ Pages_read_engagement: ${data.canReadFeed ? 'OUI' : 'NON'}\n${feedDetails}\n✅ Pages_manage_posts: ${data.canPublish ? 'OUI' : 'NON'}\n📋 Scopes (debug_token): ${scopes}\nPermissions détectées: ${perms}${missing}`
         );
       } else if (data.success && data.message) {
         setFbResult('✅ ' + data.message);
