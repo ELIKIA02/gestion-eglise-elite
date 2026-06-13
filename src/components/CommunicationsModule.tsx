@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download, FileText, Vote } from 'lucide-react';
+import { Send, Users, HelpCircle, Sparkles, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Bold, Italic, Strikethrough, Code, Image, X, Type, ArrowUp, ArrowDown, Pin, PinOff, RefreshCw, Download, FileText, Vote, Globe } from 'lucide-react';
 import PollsModule from './PollsModule';
 
 interface ScheduledMessage {
@@ -86,7 +86,16 @@ const [qrVersion, setQrVersion] = useState(0);
 const [exportedAuth, setExportedAuth] = useState<string | null>(null);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages'>('messagerie');
+const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'facebook'>('messagerie');
+
+  const [fbMessage, setFbMessage] = useState('');
+  const [fbImageUrl, setFbImageUrl] = useState('');
+  const [fbPageId, setFbPageId] = useState('');
+  const [fbPages, setFbPages] = useState<any[]>([]);
+  const [fbScheduleMode, setFbScheduleMode] = useState(false);
+  const [fbScheduledAt, setFbScheduledAt] = useState('');
+  const [fbSending, setFbSending] = useState(false);
+  const [fbResult, setFbResult] = useState<string | null>(null);
 
   // Bump QR version when new QR arrives to force image refresh
   useEffect(() => {
@@ -492,6 +501,48 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages'>('messa
     }
   };
 
+  const handleFbPublish = async () => {
+    if (!fbMessage.trim() || !fbPageId) return;
+    setFbSending(true);
+    setFbResult(null);
+    try {
+      const token = settings?.facebookToken;
+      if (fbScheduleMode && fbScheduledAt) {
+        const res = await fetch('/api/facebook/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId: fbPageId, message: fbMessage, imageUrl: fbImageUrl || undefined, scheduledTime: fbScheduledAt, accessToken: token }),
+        });
+        const data = await res.json();
+        setFbResult(data.success ? '✅ Publication programmée avec succès' : `❌ ${data.error}`);
+      } else {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId: fbPageId, message: fbMessage, imageUrl: fbImageUrl || undefined, accessToken: token }),
+        });
+        const data = await res.json();
+        setFbResult(data.success ? '✅ Publié sur Facebook avec succès' : `❌ ${data.error}`);
+      }
+    } catch (err: any) {
+      setFbResult(`❌ Erreur: ${err.message}`);
+    }
+    setFbSending(false);
+  };
+
+  // Auto-load Facebook pages when token is available
+  useEffect(() => {
+    if (settings?.facebookToken && commsSubTab === 'facebook') {
+      fetch('/api/facebook/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: settings.facebookToken }),
+      }).then(r => r.json()).then(data => {
+        if (data.success && data.pages) setFbPages(data.pages);
+      }).catch(() => {});
+    }
+  }, [settings?.facebookToken, commsSubTab]);
+
   return (
     <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center border-b border-slate-205 pb-3">
@@ -620,6 +671,12 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages'>('messa
             commsSubTab === 'sondages' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
           }`}>
           <Vote className="w-3.5 h-3.5" /> Sondages
+        </button>
+        <button onClick={() => setCommsSubTab('facebook')}
+          className={`pb-2.5 px-1 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+            commsSubTab === 'facebook' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+          }`}>
+          <Globe className="w-3.5 h-3.5" /> Facebook
         </button>
       </div>
 
@@ -965,8 +1022,80 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages'>('messa
         </div>
       )}
       </>
-    ) : (
+      ) : commsSubTab === 'sondages' ? (
       <PollsModule members={members} />
+    ) : (
+      <div className="space-y-4 animate-fade-in">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm space-y-4">
+          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-blue-600" />
+            Publier sur Facebook
+          </h3>
+          {!settings?.facebookToken ? (
+            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-xs text-amber-800 dark:text-amber-300">
+              <p className="font-semibold">Token Facebook non configuré</p>
+              <p className="mt-1">Allez dans <strong>Paramètres</strong> → ajoutez votre <strong>Token d'accès Facebook Page</strong> (long-lived).</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">Message</label>
+                <textarea value={fbMessage} onChange={e => setFbMessage(e.target.value)} rows={5}
+                  placeholder="Écrivez le contenu de votre publication..."
+                  className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">URL Image (optionnelle)</label>
+                  <input type="url" value={fbImageUrl} onChange={e => setFbImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block">Page Facebook</label>
+                  <select value={fbPageId} onChange={e => setFbPageId(e.target.value)}
+                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400 text-slate-800 dark:text-slate-200">
+                    <option value="">Sélectionnez une page</option>
+                    {fbPages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                  <input type="checkbox" checked={fbScheduleMode} onChange={e => setFbScheduleMode(e.target.checked)} className="accent-indigo-600" />
+                  Programmer la publication
+                </label>
+                {fbScheduleMode && (
+                  <input type="datetime-local" value={fbScheduledAt} onChange={e => setFbScheduledAt(e.target.value)}
+                    className="w-full text-xs p-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 focus:outline-indigo-600 dark:focus:outline-indigo-400" />
+                )}
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button onClick={handleFbPublish} disabled={fbSending || !fbMessage.trim() || !fbPageId}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border border-blue-500 shadow-xs">
+                  <Globe className="w-4 h-4" />
+                  {fbSending ? 'Publication...' : fbScheduleMode ? 'Programmer' : 'Publier maintenant'}
+                </button>
+              </div>
+              {fbResult && (
+                <div className={`p-3 rounded-lg text-xs ${fbResult.includes('✅') ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                    {fbResult}
+                </div>
+              )}
+            </>
+          )}
+          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed space-y-1">
+            <p className="font-semibold text-slate-600 dark:text-slate-300">Comment obtenir un token Facebook Page :</p>
+            <ol className="list-decimal pl-4 space-y-0.5">
+              <li>Allez sur <a href="https://developers.facebook.com" target="_blank" rel="noopener" className="text-blue-600 underline">developers.facebook.com</a></li>
+              <li>Créez une App ou utilisez une App existante</li>
+              <li>Ajoutez le produit "Facebook Login" puis "Outils Graph API"</li>
+              <li>Générez un <strong>Token d'accès Page</strong> (long-lived, 60 jours)</li>
+              <li>Copiez-le dans <strong>Paramètres → Token Facebook Page</strong></li>
+            </ol>
+          </div>
+        </div>
+      </div>
     )}
     </div>
   );

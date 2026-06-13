@@ -17,6 +17,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
   const [worshipDays, setWorshipDays] = useState('');
   const [reportHeader, setReportHeader] = useState('');
   const [mistralApiKey, setMistralApiKey] = useState('');
+  const [facebookToken, setFacebookToken] = useState('');
   const [cachetBase64, setCachetBase64] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [liturgicalSeasons, setLiturgicalSeasons] = useState('');
@@ -76,6 +77,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
       setWorshipDays(settings.worshipDays || "Dimanche, Mercredi");
       setReportHeader(settings.reportHeader || "ÉGLISE ÉVANGÉLIQUE DE LA GRÂCE\nSecrétariat Général et Trésorerie\nB.P. 2480 - Tel: +242 06 123 4567 • Brazzaville, Congo");
       setMistralApiKey(settings.mistralApiKey || '');
+      setFacebookToken(settings.facebookToken || '');
       setCachetBase64(settings.cachetBase64 || '');
       setTheme(settings.theme || 'light');
       setLiturgicalSeasons(settings.liturgicalSeasons || "Avent, Carême, Pâques, Pentecôte, Ordinaire, Noël");
@@ -114,6 +116,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
           .join(', '),
         reportHeader: reportHeader.trim(),
         mistralApiKey: mistralApiKey.trim(),
+        facebookToken: facebookToken.trim(),
         cachetBase64: cachetBase64.trim(),
         theme: theme,
         liturgicalSeasons: liturgicalSeasons.trim(),
@@ -428,6 +431,15 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                 Obtenez une clé gratuitement sur <a href="https://console.mistral.ai" target="_blank" className="text-indigo-600 hover:underline" rel="noreferrer">console.mistral.ai</a>
               </span>
             </div>
+          </div>
+
+          {/* Facebook Page Token */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-300 block">Token d'accès Facebook Page </label>
+            <input type="password" value={facebookToken} onChange={e => setFacebookToken(e.target.value)}
+              placeholder="EAAB... (token longue durée)"
+              className="w-full text-xs p-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 focus:outline-indigo-600 dark:focus:outline-indigo-400 font-mono" />
+            <p className="text-[10px] text-slate-400">Généré depuis <strong>Facebook Developers</strong> → Outils Graph API → Long-lived Page Token. Permet de publier sur la page.</p>
           </div>
 
           {/* Theme Configuration */}

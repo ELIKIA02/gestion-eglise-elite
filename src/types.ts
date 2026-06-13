@@ -110,6 +110,7 @@ export interface ChurchSettings {
   worshipDays: string;
   reportHeader: string;
   mistralApiKey?: string;
+  facebookToken?: string;
   cachetBase64?: string;
   theme?: 'light' | 'dark';
   notifications?: {

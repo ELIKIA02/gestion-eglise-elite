@@ -609,6 +609,69 @@ async function startServer() {
     }
   });
 
+  // --- Facebook Graph API ---
+  app.post("/api/facebook/post", async (req, res) => {
+    try {
+      const { pageId, message, imageUrl, accessToken } = req.body;
+      if (!pageId || !message || !accessToken) {
+        return res.status(400).json({ success: false, error: "pageId, message et accessToken requis" });
+      }
+      const apiUrl = imageUrl
+        ? `https://graph.facebook.com/v19.0/${pageId}/photos?url=${encodeURIComponent(imageUrl)}&message=${encodeURIComponent(message)}&access_token=${accessToken}`
+        : `https://graph.facebook.com/v19.0/${pageId}/feed?message=${encodeURIComponent(message)}&access_token=${accessToken}`;
+      const fbRes = await fetch(apiUrl, { method: 'POST' });
+      const data = await fbRes.json();
+      if (data.id) {
+        res.json({ success: true, postId: data.id });
+      } else {
+        res.status(400).json({ success: false, error: data.error?.message || 'Erreur Facebook inconnue' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/facebook/schedule", async (req, res) => {
+    try {
+      const { pageId, message, imageUrl, scheduledTime, accessToken } = req.body;
+      if (!pageId || !message || !scheduledTime || !accessToken) {
+        return res.status(400).json({ success: false, error: "pageId, message, scheduledTime et accessToken requis" });
+      }
+      const timestamp = Math.floor(new Date(scheduledTime).getTime() / 1000);
+      const apiUrl = imageUrl
+        ? `https://graph.facebook.com/v19.0/${pageId}/photos`
+        : `https://graph.facebook.com/v19.0/${pageId}/feed`;
+      const body: any = { message, access_token: accessToken, scheduled_publish_time: timestamp };
+      if (imageUrl) body.url = imageUrl;
+      body.published = false;
+      const fbRes = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await fbRes.json();
+      if (data.id) {
+        res.json({ success: true, postId: data.id });
+      } else {
+        res.status(400).json({ success: false, error: data.error?.message || 'Erreur Facebook inconnue' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/facebook/verify", async (req, res) => {
+    try {
+      const { accessToken } = req.body;
+      if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
+      const data = await fbRes.json();
+      if (data.data) {
+        res.json({ success: true, pages: data.data.map((p: any) => ({ id: p.id, name: p.name, category: p.category })) });
+      } else {
+        res.status(400).json({ success: false, error: data.error?.message || 'Token invalide' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Serve Frontend Assets (production only — dev uses Vite on port 5173)
   if (!isDev) {
     const distPath = path.join(process.cwd(), "dist");
