@@ -497,7 +497,7 @@ export default function SettingsModule({ settings, loading, onRefresh }: Setting
                       {fbDebugResult.info?.type === 'page'
                         ? '✅ Token Page valide. Tu peux publier sur Facebook.'
                         : fbDebugResult.info?.type === 'user'
-                          ? '⚠️ C\'est un token Utilisateur. Suis la procédure : tape me/accounts dans l\'Explorateur API Graph pour obtenir le token de ta Page.'
+                          ? '⚠️ C\'est un token UTILISATEUR, pas un token Page. Dans l\'Explorateur API, tape me/accounts → Soumettre → copie le access_token de ta Page (le long texte dans le résultat) → colle-le ici.'
                           : '❌ Token invalide ou expiré.'}
                     </div>
                   </div>

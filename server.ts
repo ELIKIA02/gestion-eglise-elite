@@ -768,26 +768,29 @@ async function startServer() {
     try {
       const { accessToken } = req.body;
       if (!accessToken) return res.status(400).json({ success: false, error: "accessToken requis" });
-      // Vérifier le type de token (user vs page)
       const meRes = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,permissions&access_token=${accessToken}`);
       const meData: any = await meRes.json();
-      // Vérifier si c'est un token de page
       const accountsRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${accessToken}`);
       const accountsData: any = await accountsRes.json();
-      const info: any = { type: 'unknown', id: meData.id, name: meData.name, permissions: [], pages: [], error: null };
-      if (meData.error) {
+      const info: any = { type: 'unknown', id: meData?.id, name: meData?.name, permissions: [], pages: [], error: null };
+
+      if (meData?.error) {
         info.error = meData.error.message;
+        // Peut-être un token Page qui ne supporte pas /me
+        if (accountsData?.data) {
+          info.type = 'page';
+          info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
+        }
       } else {
         info.id = meData.id;
         info.name = meData.name;
         info.permissions = (meData.permissions?.data || []).map((p: any) => ({ permission: p.permission, status: p.status }));
-        info.type = 'user';
-      }
-      if (accountsData.data) {
-        info.type = 'page';
-        info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
-      } else if (accountsData.error) {
-        info.error = accountsData.error.message;
+        // Token Page si name correspond à une page ET pas de user profile
+        const isPageName = accountsData?.data?.some((p: any) => p.name === meData.name);
+        info.type = (isPageName || meData.id?.startsWith?.('1')) ? 'page' : 'user';
+        if (accountsData?.data) {
+          info.pages = accountsData.data.map((p: any) => ({ id: p.id, name: p.name }));
+        }
       }
       res.json({ success: true, info });
     } catch (err: any) {
