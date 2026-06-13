@@ -98,6 +98,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const [fbImages, setFbImages] = useState<{ file: File; preview: string; uploaded: boolean; photoId?: string }[]>([]);
   const [fbPostType, setFbPostType] = useState<'simple' | 'article'>('simple');
   const [fbUploadedCount, setFbUploadedCount] = useState(0);
+  const [fbTesting, setFbTesting] = useState(false);
   const fbImageInputRef = useRef<HTMLInputElement>(null);
 
   // Bump QR version when new QR arrives to force image refresh
@@ -487,6 +488,30 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       if (data.success) return data.photoId;
       return null;
     } catch { return null; }
+  };
+
+  const handleFbTest = async () => {
+    if (!fbPageId) return;
+    const token = settings?.facebookToken;
+    if (!token) { setFbResult('❌ Token non configuré'); return; }
+    setFbTesting(true);
+    setFbResult(null);
+    try {
+      const res = await fetch('/api/facebook/test-publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: fbPageId, accessToken: token }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFbResult('✅ ' + data.message);
+      } else {
+        setFbResult(`❌ Code ${data.code || '?'} : ${data.error}`);
+      }
+    } catch (err: any) {
+      setFbResult(`❌ Erreur: ${err.message}`);
+    }
+    setFbTesting(false);
   };
 
   const handleFbPublish = async () => {
@@ -1173,6 +1198,11 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
 
               {/* Bouton publier */}
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button onClick={handleFbTest} disabled={fbTesting || !fbPageId}
+                  className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50">
+                  {fbTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  Tester la publication
+                </button>
                 <button onClick={handleFbPublish} disabled={fbSending || !fbMessage.trim() || !fbPageId}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer border border-blue-500 shadow-xs">
                   {fbSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}

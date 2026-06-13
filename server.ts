@@ -769,6 +769,29 @@ async function startServer() {
     }
   });
 
+  // Tester la capacité à publier (vérifie les permissions réelles du token Page)
+  app.post("/api/facebook/test-publish", async (req, res) => {
+    try {
+      const { pageId, accessToken } = req.body;
+      if (!pageId || !accessToken) return res.status(400).json({ success: false, error: "pageId et accessToken requis" });
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Test de publication depuis l\'app de gestion d\'église — ignorer ce message', access_token: accessToken }),
+      });
+      const data: any = await fbRes.json();
+      if (data.id) {
+        // Supprimer immédiatement le post de test
+        await fetch(`https://graph.facebook.com/v19.0/${data.id}?access_token=${accessToken}`, { method: 'DELETE' });
+        res.json({ success: true, message: '✅ Publication OK (post de test supprimé)' });
+      } else {
+        res.json({ success: false, error: data.error?.message || 'Erreur inconnue', code: data.error?.code });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // Déboguer un token (vérifier permissions et type)
   app.post("/api/facebook/debug-token", async (req, res) => {
     try {
