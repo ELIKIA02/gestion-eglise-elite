@@ -99,6 +99,8 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const [fbPostType, setFbPostType] = useState<'simple' | 'article'>('simple');
   const [fbUploadedCount, setFbUploadedCount] = useState(0);
   const [fbTesting, setFbTesting] = useState(false);
+  const [fbWaGroupId, setFbWaGroupId] = useState('');
+  const [fbWaSending, setFbWaSending] = useState(false);
   const fbImageInputRef = useRef<HTMLInputElement>(null);
 
   // Bump QR version when new QR arrives to force image refresh
@@ -521,6 +523,36 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       setFbResult(`❌ Erreur: ${err.message}`);
     }
     setFbTesting(false);
+  };
+
+  const handleFbSendToWhatsApp = async () => {
+    if (!fbMessage.trim() || !fbWaGroupId) return;
+    const token = settings?.facebookToken;
+    if (!token) { setFbResult('❌ Token Facebook non configuré'); return; }
+    if (waStatus !== 'connected') { setFbResult('❌ WhatsApp non connecté'); return; }
+    setFbWaSending(true);
+    setFbResult(null);
+    try {
+      const cleanText = formatForFacebook(fbMessage);
+      let imageBase64: string | undefined;
+      if (fbImages.length > 0) {
+        const reader = new FileReader();
+        imageBase64 = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(fbImages[0].file);
+        });
+      }
+      const res = await fetch('/api/whatsapp/send-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupJid: fbWaGroupId, text: cleanText, imageBase64 }),
+      });
+      const data = await res.json();
+      setFbResult(data.success ? '✅ Envoyé sur WhatsApp' : `❌ ${data.error || 'Erreur'}`);
+    } catch (err: any) {
+      setFbResult(`❌ Erreur: ${err.message}`);
+    }
+    setFbWaSending(false);
   };
 
   const handleFbPublish = async () => {
@@ -1202,6 +1234,23 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Envoi WhatsApp */}
+              {waStatus === 'connected' && (
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <select value={fbWaGroupId} onChange={e => setFbWaGroupId(e.target.value)}
+                    className="text-[11px] p-1.5 border border-slate-200 rounded-md bg-white focus:outline-emerald-600 max-w-[200px]">
+                    <option value="">Groupe WhatsApp…</option>
+                    {whatsappGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                  <button onClick={handleFbSendToWhatsApp} disabled={fbWaSending || !fbMessage.trim() || !fbWaGroupId}
+                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer">
+                    {fbWaSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    {fbWaSending ? 'Envoi...' : 'WhatsApp'}
+                  </button>
                 </div>
               )}
 
