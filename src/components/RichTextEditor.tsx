@@ -125,9 +125,9 @@ export default function RichTextEditor({
   const toUpper = (t: string) => t.toUpperCase();
   const toLower = (t: string) => t.toLowerCase();
 
-  const formatActions: Record<string, (text: string) => string> = {
-    bold: toWaBold, italic: toWaItalic, boldItalic: toWaBoldItalic, strike: toWaStrike, mono: toWaMono, boldUpper: toWaBoldUppercase
-  };
+  const formatActions: Record<string, (text: string) => string> = target === 'facebook'
+    ? { bold: toFbBold, italic: toFbItalic, boldItalic: toFbBoldItalic, strike: toFbStrike, mono: toFbMono, boldUpper: toFbBoldUppercase }
+    : { bold: toWaBold, italic: toWaItalic, boldItalic: toWaBoldItalic, strike: toWaStrike, mono: toWaMono, boldUpper: toWaBoldUppercase };
 
   return (
     <div className="space-y-1">
