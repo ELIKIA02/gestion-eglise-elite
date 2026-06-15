@@ -18,6 +18,7 @@ let cachedGroups: { id: string; name: string; subject: string }[] = [];
 let groupsLastFetch = 0;
 let keepAliveTimer: any = null;
 let presenceTimer: any = null;
+let initPromise: Promise<void> | null = null;
 const MAX_RECONNECT_DELAY = 60000;
 
 function getReconnectDelay(): number {
@@ -93,112 +94,123 @@ function stopKeepAlive() {
 }
 
 export async function initWhatsApp() {
+  // Prevent concurrent init calls
+  if (initPromise) return initPromise;
   const authDir = getAuthDir();
   let authTimeout: any;
 
-  // Restore auth from env var if present
-  if (process.env.WA_AUTH_DATA) {
-    restoreAuthFromBase64(process.env.WA_AUTH_DATA);
-  }
+  initPromise = (async () => {
+    // Clean up previous socket before creating a new one
+    if (sock) {
+      try { sock.end(undefined); } catch {}
+      sock = null;
+    }
 
-  console.log('[WA] Initializing WhatsApp...');
-  if (!fs.existsSync(authDir)) {
-    console.log('[WA] Auth directory does not exist, creating');
-    fs.mkdirSync(authDir, { recursive: true });
-  }
+    // Restore auth from env var if present
+    if (process.env.WA_AUTH_DATA) {
+      restoreAuthFromBase64(process.env.WA_AUTH_DATA);
+    }
 
-  try {
-    const b = await getBaileys();
-    const { useMultiFileAuthState, DisconnectReason } = b;
+    console.log('[WA] Initializing WhatsApp...');
+    if (!fs.existsSync(authDir)) {
+      console.log('[WA] Auth directory does not exist, creating');
+      fs.mkdirSync(authDir, { recursive: true });
+    }
 
-    console.log('[WA] Loading auth state...');
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    console.log('[WA] Auth state loaded, creating socket...');
+    try {
+      const b = await getBaileys();
+      const { useMultiFileAuthState, DisconnectReason } = b;
 
-    sock = b.default({
-      auth: state,
-      printQRInTerminal: true,
-      browser: ['Gestion Eglise', 'Chrome', '1.0.0'],
-      syncFullHistory: false,
-      markOnlineOnConnect: false,
-      keepAliveIntervalMs: 25000,
-    });
+      console.log('[WA] Loading auth state...');
+      const { state, saveCreds } = await useMultiFileAuthState(authDir);
+      console.log('[WA] Auth state loaded, creating socket...');
 
-    // Timeout: if neither QR nor connected within 30s, stale creds — wipe for fresh QR
-    authTimeout = setTimeout(() => {
-      if (status !== 'connected' && !currentQR) {
-        console.log('[WA] Auth timeout — no QR and no connection in 30s, wiping stale creds');
-        try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
-        status = 'disconnected';
-        currentQR = null;
-        reconnectAttempt = 0;
-        initWhatsApp();
-      }
-    }, 30000);
+      sock = b.default({
+        auth: state,
+        printQRInTerminal: true,
+        browser: ['Gestion Eglise', 'Chrome', '1.0.0'],
+        syncFullHistory: false,
+        markOnlineOnConnect: false,
+        keepAliveIntervalMs: 25000,
+      });
 
-    sock.ev.on('connection.update', (update: any) => {
-      const { connection, lastDisconnect, qr } = update;
-      if (qr) {
-        currentQR = qr;
-        reconnectAttempt = 0;
-        clearTimeout(authTimeout);
-        console.log('[WA] QR code generated (first 50 chars):', qr.substring(0, 50) + '...');
-      }
-      if (connection === 'connecting') {
-        status = 'connecting';
-        console.log('[WA] Status: connecting');
-      }
-      if (connection === 'open') {
-        status = 'connected';
-        currentQR = null;
-        reconnectAttempt = 0;
-        clearTimeout(authTimeout);
-        startKeepAlive();
-        console.log('[WA] Status: connected');
-        setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
-      }
-      if (connection === 'close') {
-        stopKeepAlive();
-        clearTimeout(authTimeout);
-        const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
-        const isLoggedOut = error === DisconnectReason.loggedOut;
-        const isRestartRequired = error === DisconnectReason.restartRequired;
-        const reason = isLoggedOut ? 'logged-out' : isRestartRequired ? 'restart-required' : error || 'unknown';
-        console.log('[WA] Status: disconnected, reason:', reason);
-        status = 'disconnected';
-        currentQR = null;
-
-        if (isLoggedOut) {
-          fs.rmSync(authDir, { recursive: true, force: true });
+      // Monitor: if no QR appears and no connection after 20s, wipe stale creds
+      authTimeout = setTimeout(() => {
+        if (status !== 'connected' && !currentQR) {
+          console.log('[WA] Auth timeout — no QR and no connection in 20s, wiping stale creds');
+          try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+          status = 'disconnected';
+          currentQR = null;
           reconnectAttempt = 0;
+          initPromise = null;
+          initWhatsApp();
         }
+      }, 20000);
 
-        reconnectAttempt++;
-
-        // After 3 failed attempts, wipe auth so a fresh QR appears instead of reusing stale creds
-        if (reconnectAttempt >= 3 && !isLoggedOut) {
-          console.log('[WA] Too many reconnect failures — clearing auth for fresh QR');
-          fs.rmSync(authDir, { recursive: true, force: true });
+      sock.ev.on('connection.update', (update: any) => {
+        const { connection, lastDisconnect, qr } = update;
+        if (qr) {
+          currentQR = qr;
           reconnectAttempt = 0;
+          clearTimeout(authTimeout);
+          console.log('[WA] QR ready');
         }
+        if (connection === 'connecting') {
+          status = 'connecting';
+        }
+        if (connection === 'open') {
+          status = 'connected';
+          currentQR = null;
+          reconnectAttempt = 0;
+          clearTimeout(authTimeout);
+          startKeepAlive();
+          console.log('[WA] Connected');
+          setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
+        }
+        if (connection === 'close') {
+          stopKeepAlive();
+          clearTimeout(authTimeout);
+          const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const isLoggedOut = error === DisconnectReason.loggedOut;
+          const reason = isLoggedOut ? 'logged-out' : error || 'unknown';
+          status = 'disconnected';
+          currentQR = null;
+          console.log('[WA] Disconnected, reason:', reason);
 
-        if (!isLoggedOut || isRestartRequired) {
+          if (isLoggedOut) {
+            fs.rmSync(authDir, { recursive: true, force: true });
+            reconnectAttempt = 0;
+          }
+
+          reconnectAttempt++;
+
+          // After 3 failed attempts with same creds, wipe for fresh QR
+          if (reconnectAttempt >= 3 && !isLoggedOut) {
+            console.log('[WA] Too many reconnect failures — clearing auth for fresh QR');
+            fs.rmSync(authDir, { recursive: true, force: true });
+            reconnectAttempt = 0;
+          }
+
           const delay = getReconnectDelay();
           console.log(`[WA] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
+          initPromise = null;
           setTimeout(() => initWhatsApp(), delay);
         }
-      }
-    });
+      });
 
-    sock.ev.on('creds.update', saveCreds);
-    console.log('[WA] Socket created, waiting for connection...');
-  } catch (err) {
-    clearTimeout(authTimeout);
-    console.error('[WA] Init error:', err);
-    reconnectAttempt++;
-    const delay = getReconnectDelay();
-    setTimeout(() => initWhatsApp(), delay);
-  }
+      sock.ev.on('creds.update', saveCreds);
+      console.log('[WA] Waiting for connection or QR...');
+    } catch (err) {
+      clearTimeout(authTimeout);
+      console.error('[WA] Init error:', err);
+      reconnectAttempt++;
+      const delay = getReconnectDelay();
+      initPromise = null;
+      setTimeout(() => initWhatsApp(), delay);
+    }
+  })();
+
+  return initPromise;
 }
 
 export const getQR = () => currentQR;

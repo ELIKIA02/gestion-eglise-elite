@@ -81,7 +81,8 @@ export default function CommunicationsModule({ comms, members, departments, sett
 const [waStatus, setWaStatus] = useState<string>('checking');
 const [waQR, setWaQR] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
-const [resetting, setResetting] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [forcingQR, setForcingQR] = useState(false);
 const [qrVersion, setQrVersion] = useState(0);
 const [exportedAuth, setExportedAuth] = useState<string | null>(null);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -137,6 +138,19 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       }
     } catch (e) { console.error('[Comms] WhatsApp reset failed:', e); }
     setTimeout(() => setResetting(false), 3000);
+  };
+
+  const handleForceQR = async () => {
+    setForcingQR(true);
+    try {
+      const res = await fetch('/api/whatsapp/reset?force=true', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setWaStatus('connecting');
+        setWaQR(null);
+      }
+    } catch (e) { console.error('[Comms] Force QR failed:', e); }
+    setTimeout(() => setForcingQR(false), 3000);
   };
 
   const handleExportAuth = async () => {
@@ -473,10 +487,10 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const statusLabel = (s: string) => {
     switch (s) {
       case 'connected': return 'WhatsApp connecté ✓ — envoi automatique disponible';
-      case 'connecting': return 'Connexion WhatsApp en cours...';
+      case 'connecting': return 'Connexion WhatsApp en cours... Si le QR n\'apparaît pas dans 30s, cliquez sur "Forcer QR"';
       case 'checking': return 'Vérification...';
-      case 'unreachable': return 'Serveur indisponible';
-      default: return 'WhatsApp déconnecté — scannez le QR';
+      case 'unreachable': return 'Serveur indisponible — le backend est-il lancé ?';
+      default: return 'WhatsApp déconnecté — cliquez sur "Forcer QR" pour scanner';
     }
   };
 
@@ -680,11 +694,18 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
             Exporter session
           </button>
         ) : (
-          <button onClick={handleReset} disabled={resetting}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
-            <Loader2 className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
-            {resetting ? 'Réinitialisation...' : 'Réinitialiser'}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={handleReset} disabled={resetting}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
+              <Loader2 className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
+              {resetting ? 'Réinitialisation...' : 'Redémarrer'}
+            </button>
+            <button onClick={handleForceQR} disabled={forcingQR}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
+              <QrCode className="w-3 h-3" />
+              {forcingQR ? 'Forçage...' : 'Forcer QR'}
+            </button>
+          </div>
         )}
       </div>
 
