@@ -128,8 +128,18 @@ export async function initWhatsApp() {
       const b = await getBaileys();
       const { useMultiFileAuthState, DisconnectReason } = b;
 
-      console.log('[WA] Loading auth state...');
-      const { state, saveCreds } = await useMultiFileAuthState(authDir);
+    console.log('[WA] Loading auth state...');
+
+    // Detect stale auth: too many files = corrupted state over time
+    let authFiles: string[] = [];
+    try { authFiles = fs.readdirSync(authDir).filter(f => f !== '.' && f !== '..'); } catch {}
+    if (authFiles.length > 500) {
+      console.log(`[WA] Auth dir has ${authFiles.length} files (> 500), wiping stale state for fresh start`);
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+      fs.mkdirSync(authDir, { recursive: true });
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
       console.log('[WA] Auth state loaded, creating socket...');
 
       lastError = null;

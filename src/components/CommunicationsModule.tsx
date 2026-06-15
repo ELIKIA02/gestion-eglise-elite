@@ -81,9 +81,10 @@ export default function CommunicationsModule({ comms, members, departments, sett
 const [waStatus, setWaStatus] = useState<string>('checking');
 const [waQR, setWaQR] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
-const [resetting, setResetting] = useState(false);
-const [forcingQR, setForcingQR] = useState(false);
-const [showDiag, setShowDiag] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [forcingQR, setForcingQR] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [showDiag, setShowDiag] = useState(false);
 const [diagData, setDiagData] = useState<any>(null);
 const [diagLoading, setDiagLoading] = useState(false);
 const [lastError, setLastError] = useState<string | null>(null);
@@ -156,6 +157,19 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       }
     } catch (e) { console.error('[Comms] Force QR failed:', e); }
     setTimeout(() => setForcingQR(false), 3000);
+  };
+
+  const handleCleanAuth = async () => {
+    setCleaning(true);
+    try {
+      const res = await fetch('/api/whatsapp/reset?force=true', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setWaStatus('connecting');
+        setWaQR(null);
+      }
+    } catch (e) { console.error('[Comms] Clean auth failed:', e); }
+    setTimeout(() => setCleaning(false), 3000);
   };
 
   const handleExportAuth = async () => {
@@ -1295,7 +1309,12 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
                             {i === 3 && fbImages.length > 4 && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-sm">
                                 +{fbImages.length - 4}
-                              </div>
+            <button onClick={handleCleanAuth} disabled={cleaning}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
+              <Trash2 className="w-3 h-3" />
+              {cleaning ? 'Nettoyage...' : 'Nettoyer session'}
+            </button>
+          </div>
                             )}
                           </div>
                         ))}
