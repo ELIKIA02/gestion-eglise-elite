@@ -16,6 +16,8 @@ let status: 'disconnected' | 'connecting' | 'connected' = 'disconnected';
 let reconnectAttempt = 0;
 let cachedGroups: { id: string; name: string; subject: string }[] = [];
 let groupsLastFetch = 0;
+let keepAliveTimer: any = null;
+let presenceTimer: any = null;
 const MAX_RECONNECT_DELAY = 60000;
 
 function getReconnectDelay(): number {
@@ -69,6 +71,27 @@ export function restoreAuthFromBase64(data: string): boolean {
   }
 }
 
+function startKeepAlive() {
+  stopKeepAlive();
+  // Socket-level keepalive every 25s (WhatsApp server closes idle WS)
+  keepAliveTimer = setInterval(() => {
+    if (sock?.ws?.readyState === 1) {
+      try { sock.ws.keepAlive?.(); } catch {}
+    }
+  }, 25000);
+  // Presence update every 2 min to simulate activity
+  presenceTimer = setInterval(async () => {
+    if (sock && status === 'connected') {
+      try { await sock.sendPresenceUpdate('available'); } catch {}
+    }
+  }, 120000);
+}
+
+function stopKeepAlive() {
+  if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+  if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+}
+
 export async function initWhatsApp() {
   const authDir = getAuthDir();
 
@@ -97,6 +120,7 @@ export async function initWhatsApp() {
       browser: ['Gestion Eglise', 'Chrome', '1.0.0'],
       syncFullHistory: false,
       markOnlineOnConnect: false,
+      keepAliveIntervalMs: 25000,
     });
 
     sock.ev.on('connection.update', (update: any) => {
@@ -114,10 +138,12 @@ export async function initWhatsApp() {
         status = 'connected';
         currentQR = null;
         reconnectAttempt = 0;
+        startKeepAlive();
         console.log('[WA] Status: connected');
         setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
       }
       if (connection === 'close') {
+        stopKeepAlive();
         const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const isLoggedOut = error === DisconnectReason.loggedOut;
         const isRestartRequired = error === DisconnectReason.restartRequired;
@@ -216,6 +242,7 @@ export async function sendBulk(
 }
 
 export function cleanup() {
+  stopKeepAlive();
   reconnectAttempt = 0;
   cachedGroups = [];
   groupsLastFetch = 0;
@@ -223,9 +250,10 @@ export function cleanup() {
 }
 
 export async function resetWhatsApp(shouldLogout = false) {
+  stopKeepAlive();
   cleanup();
   const authDir = getAuthDir();
-  if (fs.existsSync(authDir)) {
+  if (shouldLogout && fs.existsSync(authDir)) {
     fs.rmSync(authDir, { recursive: true, force: true });
   }
   status = 'disconnected';

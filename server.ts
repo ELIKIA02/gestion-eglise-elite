@@ -367,12 +367,13 @@ async function startServer() {
     }
   });
 
-  app.post("/api/whatsapp/reset", async (_req, res) => {
+  app.post("/api/whatsapp/reset", async (req, _res) => {
     try {
-      await resetWhatsApp();
-      res.json({ success: true, message: "WhatsApp réinitialisé. Un nouveau QR va apparaître dans quelques secondes." });
+      const force = req.query?.force === 'true';
+      await resetWhatsApp(force);
+      _res.json({ success: true, message: "WhatsApp réinitialisé. Un nouveau QR va apparaître dans quelques secondes." });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      _res.status(500).json({ success: false, error: err.message });
     }
   });
 
