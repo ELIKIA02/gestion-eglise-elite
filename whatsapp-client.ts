@@ -2,6 +2,12 @@ import { Boom } from '@hapi/boom';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
+import * as net from 'net';
+import * as dns from 'dns';
+import { promisify } from 'util';
+
+const dnsLookup = promisify(dns.lookup);
+const dnsResolve = promisify(dns.resolve);
 
 // Dynamic import for ESM-only baileys (incompatible with esbuild CJS output)
 let baileys: any = null;
@@ -13,6 +19,7 @@ async function getBaileys() {
 let sock: any = null;
 let currentQR: string | null = null;
 let status: 'disconnected' | 'connecting' | 'connected' = 'disconnected';
+let lastError: string | null = null;
 let reconnectAttempt = 0;
 let cachedGroups: { id: string; name: string; subject: string }[] = [];
 let groupsLastFetch = 0;
@@ -125,6 +132,8 @@ export async function initWhatsApp() {
       const { state, saveCreds } = await useMultiFileAuthState(authDir);
       console.log('[WA] Auth state loaded, creating socket...');
 
+      lastError = null;
+
       sock = b.default({
         auth: state,
         printQRInTerminal: true,
@@ -170,12 +179,14 @@ export async function initWhatsApp() {
         if (connection === 'close') {
           stopKeepAlive();
           clearTimeout(authTimeout);
-          const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
-          const isLoggedOut = error === DisconnectReason.loggedOut;
-          const reason = isLoggedOut ? 'logged-out' : error || 'unknown';
+          const errCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const errMsg = (lastDisconnect?.error as Boom)?.message || (lastDisconnect?.error + '') || 'unknown';
+          const isLoggedOut = errCode === DisconnectReason.loggedOut;
+          const reason = isLoggedOut ? 'logged-out' : errCode || errMsg || 'unknown';
           status = 'disconnected';
           currentQR = null;
-          console.log('[WA] Disconnected, reason:', reason);
+          lastError = `Disconnected: ${reason}`;
+          console.log('[WA] Disconnected, reason:', reason, '| msg:', errMsg);
 
           if (isLoggedOut) {
             fs.rmSync(authDir, { recursive: true, force: true });
@@ -202,6 +213,7 @@ export async function initWhatsApp() {
       console.log('[WA] Waiting for connection or QR...');
     } catch (err) {
       clearTimeout(authTimeout);
+      lastError = `Init error: ${err}`;
       console.error('[WA] Init error:', err);
       reconnectAttempt++;
       const delay = getReconnectDelay();
@@ -213,8 +225,58 @@ export async function initWhatsApp() {
   return initPromise;
 }
 
+export async function runDiagnostic(): Promise<{
+  dns: string; tcp: string; dnsWww: string; tcpWww: string; authDir: string; authFiles: string[]; baileysVersion: string;
+}> {
+  const result = {
+    dns: 'pending', tcp: 'pending', dnsWww: 'pending', tcpWww: 'pending',
+    authDir: 'pending', authFiles: [] as string[], baileysVersion: 'unknown',
+  };
+  try {
+    const addr = await dnsLookup('web.whatsapp.com');
+    result.dns = `${addr.address} (${addr.family})`;
+  } catch (e: any) { result.dns = `FAIL: ${e.message}`; }
+
+  try {
+    const addrs = await dnsResolve('web.whatsapp.com');
+    result.dnsWww = addrs.slice(0, 3).join(', ');
+  } catch (e: any) { result.dnsWww = `FAIL: ${e.message}`; }
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const s = net.createConnection(443, 'web.whatsapp.com', () => { s.end(); resolve(); });
+      s.on('error', reject);
+      s.setTimeout(5000, () => { s.destroy(); reject(new Error('timeout')); });
+    });
+    result.tcp = 'OK (port 443 reachable)';
+  } catch (e: any) { result.tcp = `FAIL: ${e.message}`; }
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const s = net.createConnection(443, 'web.whatsapp.com', () => { s.end(); resolve(); });
+      s.on('error', reject);
+      s.setTimeout(5000, () => { s.destroy(); reject(new Error('timeout')); });
+    });
+    result.tcpWww = 'OK (port 443 reachable)';
+  } catch (e: any) { result.tcpWww = `FAIL: ${e.message}`; }
+
+  const authDir = getAuthDir();
+  result.authDir = fs.existsSync(authDir) ? 'exists' : 'missing';
+  if (fs.existsSync(authDir)) {
+    result.authFiles = fs.readdirSync(authDir).filter(f => f !== '.' && f !== '..');
+  }
+
+  try {
+    const b = await getBaileys();
+    result.baileysVersion = b.__version || b.version || 'loaded';
+  } catch { result.baileysVersion = 'failed to load'; }
+
+  return result;
+}
+
 export const getQR = () => currentQR;
 export const getStatus = () => status;
+export const getLastError = () => lastError;
 
 export async function sendMessage(to: string, text: string): Promise<boolean> {
   if (!sock || status !== 'connected') throw new Error('WhatsApp non connecté');

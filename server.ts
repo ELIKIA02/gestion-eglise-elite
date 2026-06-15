@@ -5,7 +5,7 @@ import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
 import multer from "multer";
-import { initWhatsApp, getStatus, getQR, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, getLastError, runDiagnostic, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage } from "./whatsapp-client";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -217,7 +217,16 @@ async function startServer() {
 
   // WhatsApp Baileys endpoints
   app.get("/api/whatsapp/status", (_req, res) => {
-    res.json({ status: getStatus(), qr: getQR() });
+    res.json({ status: getStatus(), qr: getQR(), lastError: getLastError() });
+  });
+
+  app.get("/api/whatsapp/diagnostic", async (_req, res) => {
+    try {
+      const diag = await runDiagnostic();
+      res.json({ success: true, ...diag });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   app.post("/api/whatsapp/send-bulk", async (req, res) => {

@@ -81,8 +81,12 @@ export default function CommunicationsModule({ comms, members, departments, sett
 const [waStatus, setWaStatus] = useState<string>('checking');
 const [waQR, setWaQR] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
-  const [resetting, setResetting] = useState(false);
-  const [forcingQR, setForcingQR] = useState(false);
+const [resetting, setResetting] = useState(false);
+const [forcingQR, setForcingQR] = useState(false);
+const [showDiag, setShowDiag] = useState(false);
+const [diagData, setDiagData] = useState<any>(null);
+const [diagLoading, setDiagLoading] = useState(false);
+const [lastError, setLastError] = useState<string | null>(null);
 const [qrVersion, setQrVersion] = useState(0);
 const [exportedAuth, setExportedAuth] = useState<string | null>(null);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -120,6 +124,7 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         const data = await res.json();
         setWaStatus(data.status);
         setWaQR(data.qr || null);
+        setLastError(data.lastError || null);
       } catch { setWaStatus('unreachable'); }
     };
     poll();
@@ -723,6 +728,38 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               Le QR apparaît aussi en ASCII dans les logs (scannez-le directement depuis le terminal).
             </p>
           </details>
+        </div>
+      )}
+
+      {/* Diagnostic button */}
+      <div className="flex justify-end">
+        <button onClick={async () => {
+          setShowDiag(!showDiag);
+          if (!showDiag) {
+            setDiagLoading(true);
+            try {
+              const r = await fetch('/api/whatsapp/diagnostic');
+              setDiagData(await r.json());
+            } catch { setDiagData({ error: 'Serveur injoignable' }); }
+            setDiagLoading(false);
+          }
+        }} className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer underline">
+          Diagnostic connexion
+        </button>
+      </div>
+
+      {showDiag && (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-1.5 text-[10px] font-mono">
+          <div className="text-xs font-bold text-slate-700 mb-1">Diagnostic WhatsApp</div>
+          {diagLoading ? <div className="text-slate-400">Analyse en cours...</div> : diagData ? (
+            <>
+              <div><span className="text-slate-500">DNS web.whatsapp.com:</span> <span className={diagData.dns?.startsWith('FAIL') ? 'text-red-600' : 'text-emerald-600'}>{diagData.dns || '—'}</span></div>
+              <div><span className="text-slate-500">TCP 443:</span> <span className={diagData.tcp?.startsWith('FAIL') ? 'text-red-600' : 'text-emerald-600'}>{diagData.tcp || '—'}</span></div>
+              <div><span className="text-slate-500">Dossier auth:</span> <span className="text-slate-700">{diagData.authDir} ({diagData.authFiles?.length || 0} fichiers)</span></div>
+              <div><span className="text-slate-500">Baileys:</span> <span className="text-slate-700">{diagData.baileysVersion}</span></div>
+              <div><span className="text-slate-500">Dernière erreur:</span> <span className="text-red-600">{lastError || 'aucune'}</span></div>
+            </>
+          ) : <div className="text-slate-400">Cliquez pour lancer</div>}
         </div>
       )}
 
