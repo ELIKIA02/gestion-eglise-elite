@@ -305,11 +305,31 @@ let lastPairingCode: string | null = null;
 export function getLastPairingCode() { return lastPairingCode; }
 
 export async function requestPairingCode(phoneNumber: string): Promise<string | null> {
-  if (!sock) { lastError = 'Socket pas prêt. Attendez quelques secondes.'; return null; }
+  const clean = phoneNumber.replace(/[^0-9]/g, '');
+  if (clean.length < 8) { lastError = 'Numéro invalide (minimum 8 chiffres)'; return null; }
+
+  // If socket is dead or missing, re-init first
+  const wsOpen = sock?.ws?.readyState === 1;
+  if (!sock || !wsOpen) {
+    console.log('[WA] Socket not ready, re-initializing...');
+    initPromise = null;
+    try { await initWhatsApp(true); } catch {}
+    // Wait for socket to connect to WA servers (up to 10s)
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (sock?.ws?.readyState === 1 && status === 'connecting') break;
+    }
+    if (!sock || sock?.ws?.readyState !== 1) {
+      lastError = 'Impossible de contacter WhatsApp. Réessaie.';
+      return null;
+    }
+    // Extra wait for handshake
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
   if (status === 'connected') { lastError = 'Déjà connecté'; return null; }
+
   try {
-    const clean = phoneNumber.replace(/[^0-9]/g, '');
-    if (clean.length < 8) throw new Error('Numéro invalide (minimum 8 chiffres)');
     console.log(`[WA] Requesting pairing code for ${clean}...`);
     const code = await sock.requestPairingCode(clean);
     lastPairingCode = code;

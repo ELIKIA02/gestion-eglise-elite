@@ -385,7 +385,8 @@ async function startServer() {
       if (code) {
         res.json({ success: true, code });
       } else {
-        res.status(500).json({ success: false, error: "Impossible d'obtenir un code. Vérifiez que le QR a été généré d'abord." });
+        const lastErr = getLastError();
+        res.status(500).json({ success: false, error: lastErr || "Impossible d'obtenir le code. Vérifie les logs Render." });
       }
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
