@@ -142,6 +142,29 @@ export async function initWhatsApp(skipAuthRestore = false, pendingPhoneForPairi
         const { connection, lastDisconnect } = update;
         if (connection === 'connecting') {
           status = 'connecting';
+          // If a phone was provided for pairing, request code NOW
+          // (WebSocket is open, Baileys is about to generate QR refs)
+          if (pendingPhoneForPairing) {
+            const cleanPhone = pendingPhoneForPairing.replace(/[^0-9]/g, '');
+            if (cleanPhone.length >= 8) {
+              console.log(`[WA] init #${myInitId} - Requesting pairing code for ${cleanPhone}...`);
+              sock.requestPairingCode(cleanPhone).then((code: string) => {
+                lastPairingCode = code;
+                console.log(`[WA] init #${myInitId} - Pairing code: ${code}`);
+                if (pendingPairingResolve) {
+                  pendingPairingResolve(code);
+                  pendingPairingResolve = null;
+                }
+              }).catch((err: any) => {
+                lastError = err.message;
+                console.error(`[WA] init #${myInitId} - Pairing error:`, err.message);
+                if (pendingPairingResolve) {
+                  pendingPairingResolve(null);
+                  pendingPairingResolve = null;
+                }
+              });
+            }
+          }
         }
         if (connection === 'open') {
           status = 'connected';
@@ -175,30 +198,6 @@ export async function initWhatsApp(skipAuthRestore = false, pendingPhoneForPairi
 
       sock.ev.on('creds.update', saveCreds);
       console.log(`[WA] init #${myInitId} - Socket ready.`);
-
-      // If a phone number was provided for pairing, request code immediately
-      if (pendingPhoneForPairing) {
-        const cleanPhone = pendingPhoneForPairing.replace(/[^0-9]/g, '');
-        if (cleanPhone.length >= 8) {
-          console.log(`[WA] init #${myInitId} - Requesting pairing code for ${cleanPhone}...`);
-          // Don't await — let the pairing happen in background
-          sock.requestPairingCode(cleanPhone).then((code: string) => {
-            lastPairingCode = code;
-            console.log(`[WA] init #${myInitId} - Pairing code: ${code}`);
-            if (pendingPairingResolve) {
-              pendingPairingResolve(code);
-              pendingPairingResolve = null;
-            }
-          }).catch((err: any) => {
-            lastError = err.message;
-            console.error(`[WA] init #${myInitId} - Pairing error:`, err.message);
-            if (pendingPairingResolve) {
-              pendingPairingResolve(null);
-              pendingPairingResolve = null;
-            }
-          });
-        }
-      }
     } catch (err) {
       lastError = `Init error: ${err}`;
       console.error(`[WA] init #${myInitId} - Init error:`, err);
