@@ -94,6 +94,7 @@ function stopKeepAlive() {
 
 export async function initWhatsApp() {
   const authDir = getAuthDir();
+  let authTimeout: any;
 
   // Restore auth from env var if present
   if (process.env.WA_AUTH_DATA) {
@@ -123,11 +124,24 @@ export async function initWhatsApp() {
       keepAliveIntervalMs: 25000,
     });
 
+    // Timeout: if neither QR nor connected within 30s, stale creds — wipe for fresh QR
+    authTimeout = setTimeout(() => {
+      if (status !== 'connected' && !currentQR) {
+        console.log('[WA] Auth timeout — no QR and no connection in 30s, wiping stale creds');
+        try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+        status = 'disconnected';
+        currentQR = null;
+        reconnectAttempt = 0;
+        initWhatsApp();
+      }
+    }, 30000);
+
     sock.ev.on('connection.update', (update: any) => {
       const { connection, lastDisconnect, qr } = update;
       if (qr) {
         currentQR = qr;
         reconnectAttempt = 0;
+        clearTimeout(authTimeout);
         console.log('[WA] QR code generated (first 50 chars):', qr.substring(0, 50) + '...');
       }
       if (connection === 'connecting') {
@@ -138,12 +152,14 @@ export async function initWhatsApp() {
         status = 'connected';
         currentQR = null;
         reconnectAttempt = 0;
+        clearTimeout(authTimeout);
         startKeepAlive();
         console.log('[WA] Status: connected');
         setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
       }
       if (connection === 'close') {
         stopKeepAlive();
+        clearTimeout(authTimeout);
         const error = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const isLoggedOut = error === DisconnectReason.loggedOut;
         const isRestartRequired = error === DisconnectReason.restartRequired;
@@ -157,8 +173,16 @@ export async function initWhatsApp() {
           reconnectAttempt = 0;
         }
 
+        reconnectAttempt++;
+
+        // After 3 failed attempts, wipe auth so a fresh QR appears instead of reusing stale creds
+        if (reconnectAttempt >= 3 && !isLoggedOut) {
+          console.log('[WA] Too many reconnect failures — clearing auth for fresh QR');
+          fs.rmSync(authDir, { recursive: true, force: true });
+          reconnectAttempt = 0;
+        }
+
         if (!isLoggedOut || isRestartRequired) {
-          reconnectAttempt++;
           const delay = getReconnectDelay();
           console.log(`[WA] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
           setTimeout(() => initWhatsApp(), delay);
@@ -169,6 +193,7 @@ export async function initWhatsApp() {
     sock.ev.on('creds.update', saveCreds);
     console.log('[WA] Socket created, waiting for connection...');
   } catch (err) {
+    clearTimeout(authTimeout);
     console.error('[WA] Init error:', err);
     reconnectAttempt++;
     const delay = getReconnectDelay();
