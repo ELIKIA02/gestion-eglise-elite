@@ -26,7 +26,10 @@ let groupsLastFetch = 0;
 let keepAliveTimer: any = null;
 let presenceTimer: any = null;
 let initPromise: Promise<void> | null = null;
+let initCounter = 0;
 const MAX_RECONNECT_DELAY = 60000;
+const QR_TIMEOUT_MS = 60000; // generous timeout for QR to be scanned
+let lastError408 = false; // track 408 errors to avoid auto-reconnect
 
 function getReconnectDelay(): number {
   const delay = Math.min(2000 * Math.pow(2, reconnectAttempt), MAX_RECONNECT_DELAY);
@@ -100,71 +103,80 @@ function stopKeepAlive() {
   if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
 }
 
-export async function initWhatsApp() {
+export async function initWhatsApp(skipAuthRestore = false) {
   // Prevent concurrent init calls
   if (initPromise) return initPromise;
   const authDir = getAuthDir();
   let authTimeout: any;
+  const myInitId = ++initCounter;
 
   initPromise = (async () => {
-    // Clean up previous socket before creating a new one
     if (sock) {
       try { sock.end(undefined); } catch {}
       sock = null;
     }
 
-    // Restore auth from env var if present
-    if (process.env.WA_AUTH_DATA) {
+    // Restore auth from env var only on first init, not on reconnects
+    if (!skipAuthRestore && process.env.WA_AUTH_DATA) {
+      console.log(`[WA] init #${myInitId} - Restoring auth from env var...`);
       restoreAuthFromBase64(process.env.WA_AUTH_DATA);
     }
 
-    console.log('[WA] Initializing WhatsApp...');
+    console.log(`[WA] init #${myInitId} - Starting WhatsApp...`);
     if (!fs.existsSync(authDir)) {
-      console.log('[WA] Auth directory does not exist, creating');
       fs.mkdirSync(authDir, { recursive: true });
+    }
+
+    let authFiles: string[] = [];
+    try { authFiles = fs.readdirSync(authDir).filter(f => f !== '.' && f !== '..'); } catch {}
+    console.log(`[WA] init #${myInitId} - Auth files: ${authFiles.length}`);
+
+    // Wipe stale auth aggressively
+    if (authFiles.length > 200 || reconnectAttempt > 1 || lastError408) {
+      console.log(`[WA] init #${myInitId} - Wiping auth dir (reconnect=${reconnectAttempt}, error408=${lastError408})`);
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
+      fs.mkdirSync(authDir, { recursive: true });
+      lastError408 = false;
     }
 
     try {
       const b = await getBaileys();
       const { useMultiFileAuthState, DisconnectReason } = b;
 
-    console.log('[WA] Loading auth state...');
+      console.log(`[WA] init #${myInitId} - Loading auth state...`);
+      const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-    // Detect stale auth: too many files = corrupted state over time
-    let authFiles: string[] = [];
-    try { authFiles = fs.readdirSync(authDir).filter(f => f !== '.' && f !== '..'); } catch {}
-    if (authFiles.length > 500) {
-      console.log(`[WA] Auth dir has ${authFiles.length} files (> 500), wiping stale state for fresh start`);
-      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
-      fs.mkdirSync(authDir, { recursive: true });
-    }
-
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
-      console.log('[WA] Auth state loaded, creating socket...');
-
+      const WA_VERSION = [2, 3000, 1018828887];
       lastError = null;
+      currentQR = null;
 
+      // Use random browser suffix to avoid WA rate-limiting by device ID
+      const browserId = Math.random().toString(36).slice(2, 8);
+      console.log(`[WA] init #${myInitId} - Creating socket (browser=GestionEglise/${browserId})...`);
       sock = b.default({
         auth: state,
-        printQRInTerminal: true,
-        browser: ['Gestion Eglise', 'Chrome', '1.0.0'],
+        version: WA_VERSION,
+        printQRInTerminal: false,
+        browser: ['GestionEglise', 'Chrome', browserId],
         syncFullHistory: false,
         markOnlineOnConnect: false,
         keepAliveIntervalMs: 25000,
+        mobile: false,
+        // Increase QR ref attempts — default is 3
+        qrTimeout: 120,
       });
 
-      // Monitor: if no QR appears and no connection after 20s, wipe stale creds
       authTimeout = setTimeout(() => {
         if (status !== 'connected' && !currentQR) {
-          console.log('[WA] Auth timeout — no QR and no connection in 20s, wiping stale creds');
+          console.log(`[WA] init #${myInitId} - QR timeout (${QR_TIMEOUT_MS}ms). Wiping auth, waiting for user action.`);
           try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
           status = 'disconnected';
           currentQR = null;
           reconnectAttempt = 0;
           initPromise = null;
-          initWhatsApp();
+          // Don't auto-reconnect on timeout — wait for user to click "Forcer QR"
         }
-      }, 20000);
+      }, QR_TIMEOUT_MS);
 
       sock.ev.on('connection.update', (update: any) => {
         const { connection, lastDisconnect, qr } = update;
@@ -172,18 +184,23 @@ export async function initWhatsApp() {
           currentQR = qr;
           reconnectAttempt = 0;
           clearTimeout(authTimeout);
-          console.log('[WA] QR ready');
+          console.log(`[WA] init #${myInitId} - QR code generated ✓ (${qr.length} chars)`);
+          // Also log QR as text for Render logs scanning
+          console.log(`[WA] init #${myInitId} - SCAN THIS QR FROM LOGS:`);
+          console.log(qr);
         }
         if (connection === 'connecting') {
           status = 'connecting';
+          console.log(`[WA] init #${myInitId} - Status: connecting`);
         }
         if (connection === 'open') {
           status = 'connected';
           currentQR = null;
           reconnectAttempt = 0;
+          lastError408 = false;
           clearTimeout(authTimeout);
           startKeepAlive();
-          console.log('[WA] Connected');
+          console.log(`[WA] init #${myInitId} - Connected ✓`);
           setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
         }
         if (connection === 'close') {
@@ -192,43 +209,54 @@ export async function initWhatsApp() {
           const errCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const errMsg = (lastDisconnect?.error as Boom)?.message || (lastDisconnect?.error + '') || 'unknown';
           const isLoggedOut = errCode === DisconnectReason.loggedOut;
-          const reason = isLoggedOut ? 'logged-out' : errCode || errMsg || 'unknown';
+          const is408 = errCode === 408;
+          const reason = isLoggedOut ? 'logged-out' : is408 ? 'timeout-408' : errCode || errMsg || 'unknown';
           status = 'disconnected';
           currentQR = null;
           lastError = `Disconnected: ${reason}`;
-          console.log('[WA] Disconnected, reason:', reason, '| msg:', errMsg);
+          console.log(`[WA] init #${myInitId} - Disconnected. reason: ${reason} | msg: ${errMsg}`);
 
           if (isLoggedOut) {
+            console.log(`[WA] init #${myInitId} - Logged out, wiping auth`);
             fs.rmSync(authDir, { recursive: true, force: true });
             reconnectAttempt = 0;
           }
 
+          // On 408 (QR timeout), DON'T auto-reconnect — wait for user action
+          if (is408) {
+            console.log(`[WA] init #${myInitId} - QR attempt expired (408). Stay disconnected. Click "Forcer QR" to retry.`);
+            lastError408 = true;
+            reconnectAttempt = 0;
+            initPromise = null;
+            return;
+          }
+
           reconnectAttempt++;
 
-          // After 3 failed attempts with same creds, wipe for fresh QR
-          if (reconnectAttempt >= 3 && !isLoggedOut) {
-            console.log('[WA] Too many reconnect failures — clearing auth for fresh QR');
+          if (reconnectAttempt >= 2 && !isLoggedOut) {
+            console.log(`[WA] init #${myInitId} - 2+ failures, wiping auth for fresh start`);
             fs.rmSync(authDir, { recursive: true, force: true });
             reconnectAttempt = 0;
           }
 
           const delay = getReconnectDelay();
-          console.log(`[WA] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
+          console.log(`[WA] init #${myInitId} - Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
           initPromise = null;
-          setTimeout(() => initWhatsApp(), delay);
+          setTimeout(() => initWhatsApp(true), delay);
         }
       });
 
       sock.ev.on('creds.update', saveCreds);
-      console.log('[WA] Waiting for connection or QR...');
+      console.log(`[WA] init #${myInitId} - Waiting for QR...`);
     } catch (err) {
       clearTimeout(authTimeout);
       lastError = `Init error: ${err}`;
-      console.error('[WA] Init error:', err);
+      console.error(`[WA] init #${myInitId} - Init error:`, err);
+      try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
       reconnectAttempt++;
       const delay = getReconnectDelay();
       initPromise = null;
-      setTimeout(() => initWhatsApp(), delay);
+      setTimeout(() => initWhatsApp(true), delay);
     }
   })();
 
@@ -355,20 +383,25 @@ export function cleanup() {
   reconnectAttempt = 0;
   cachedGroups = [];
   groupsLastFetch = 0;
+  initPromise = null; // allow fresh init
   if (sock) { sock.end(undefined); sock = null; }
 }
 
 export async function resetWhatsApp(shouldLogout = false) {
   stopKeepAlive();
-  cleanup();
   const authDir = getAuthDir();
-  if (shouldLogout && fs.existsSync(authDir)) {
-    fs.rmSync(authDir, { recursive: true, force: true });
+  // Always wipe auth on reset for a truly fresh QR
+  if (fs.existsSync(authDir)) {
+    try { fs.rmSync(authDir, { recursive: true, force: true }); } catch {}
   }
+  if (sock) { try { sock.end(undefined); } catch {} sock = null; }
   status = 'disconnected';
   currentQR = null;
+  lastError = null;
   reconnectAttempt = 0;
-  await initWhatsApp();
+  initPromise = null;
+  console.log('[WA] Reset complete — restarting fresh for QR');
+  await initWhatsApp(true);
 }
 
 export async function fetchGroups(): Promise<{ id: string; name: string; subject: string }[]> {
@@ -405,6 +438,27 @@ export function resetGroupsCache() {
 }
 
 export const getGroups = () => cachedGroups;
+
+// Try pairing code as fallback (more reliable than QR on some hosts)
+let lastPairingCode: string | null = null;
+export function getLastPairingCode() { return lastPairingCode; }
+
+export async function requestPairingCode(phoneNumber: string): Promise<string | null> {
+  if (!sock || status === 'connected') return null;
+  try {
+    // Ensure phone number is in international format without +
+    const clean = phoneNumber.replace(/[^0-9]/g, '');
+    if (clean.length < 8) throw new Error('Numéro invalide');
+    console.log(`[WA] Requesting pairing code for ${clean}...`);
+    const code = await sock.requestPairingCode(clean);
+    lastPairingCode = code;
+    console.log(`[WA] Pairing code: ${code}`);
+    return code;
+  } catch (err: any) {
+    console.error('[WA] Pairing code error:', err.message);
+    return null;
+  }
+}
 
 export async function sendGroupMessage(groupJid: string, text: string): Promise<boolean> {
   if (!sock || status !== 'connected') throw new Error('WhatsApp non connecté');

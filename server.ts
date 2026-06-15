@@ -5,7 +5,7 @@ import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
 import QRCode from "qrcode";
 import multer from "multer";
-import { initWhatsApp, getStatus, getQR, getLastError, runDiagnostic, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getQR, getLastError, runDiagnostic, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage, requestPairingCode, getLastPairingCode } from "./whatsapp-client";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -411,6 +411,23 @@ async function startServer() {
       return res.status(404).json({ error: "Aucun QR disponible" });
     }
     res.json({ qr });
+  });
+
+  // Pairing code fallback (more reliable than QR)
+  app.post("/api/whatsapp/pairing-code", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ success: false, error: "Numéro requis" });
+      if (getStatus() === 'connected') return res.json({ success: false, error: "Déjà connecté" });
+      const code = await requestPairingCode(phone);
+      if (code) {
+        res.json({ success: true, code });
+      } else {
+        res.status(500).json({ success: false, error: "Impossible d'obtenir un code. Vérifiez que le QR a été généré d'abord." });
+      }
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
   });
 
   app.get("/api/whatsapp/export-auth", (_req, res) => {

@@ -90,6 +90,9 @@ const [diagLoading, setDiagLoading] = useState(false);
 const [lastError, setLastError] = useState<string | null>(null);
 const [qrVersion, setQrVersion] = useState(0);
 const [exportedAuth, setExportedAuth] = useState<string | null>(null);
+const [pairingPhone, setPairingPhone] = useState('');
+const [pairingCode, setPairingCode] = useState<string | null>(null);
+const [pairingSending, setPairingSending] = useState(false);
 const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'facebook'>('messagerie');
@@ -194,6 +197,28 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
         alert("Copie manuelle : sélectionnez et copiez le texte ci-dessous.");
       });
     }
+  };
+
+  const handleRequestPairingCode = async () => {
+    if (!pairingPhone.trim()) { alert("Entrez le numéro WhatsApp"); return; }
+    setPairingSending(true);
+    setPairingCode(null);
+    try {
+      const res = await fetch('/api/whatsapp/pairing-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: pairingPhone.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPairingCode(data.code);
+      } else {
+        alert(`❌ ${data.error || 'Erreur'}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Erreur: ${err.message}`);
+    }
+    setPairingSending(false);
   };
 
   useEffect(() => {
@@ -742,6 +767,32 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               Le QR apparaît aussi en ASCII dans les logs (scannez-le directement depuis le terminal).
             </p>
           </details>
+        </div>
+      )}
+
+      {/* Pairing code fallback — visible même sans QR */}
+      {waStatus !== 'connected' && waStatus !== 'checking' && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+            <Smartphone className="w-5 h-5 text-indigo-600" /> Code de jumelage (alternative au QR)
+          </div>
+          <p className="text-[10px] text-slate-500">Si le QR ne fonctionne pas, entre ton <strong>numéro WhatsApp</strong> pour obtenir un code à taper dans WhatsApp.</p>
+          <div className="flex gap-2">
+            <input type="tel" value={pairingPhone} onChange={e => setPairingPhone(e.target.value)}
+              placeholder="+242 XX XXX XXXX"
+              className="flex-1 text-xs p-2 border border-slate-200 rounded-md focus:outline-indigo-600" />
+            <button onClick={handleRequestPairingCode} disabled={pairingSending || !pairingPhone.trim()}
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 cursor-pointer whitespace-nowrap">
+              {pairingSending ? '...' : 'Obtenir code'}
+            </button>
+          </div>
+          {pairingCode && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+              <p className="text-[9px] text-emerald-600 font-semibold uppercase">Code de jumelage</p>
+              <p className="text-2xl font-bold text-emerald-800 tracking-widest font-mono my-1 select-all">{pairingCode}</p>
+              <p className="text-[9px] text-slate-500">WhatsApp → Appareils liés → Lier un appareil → <strong>Connecter via le numéro de téléphone</strong></p>
+            </div>
+          )}
         </div>
       )}
 
