@@ -382,7 +382,9 @@ async function startServer() {
       if (!phone) return res.status(400).json({ success: false, error: "Numéro requis" });
       if (getStatus() === 'connected') return res.json({ success: false, error: "Déjà connecté" });
       const code = await requestPairingCode(phone);
-      if (code) {
+      if (code === 'connected') {
+        res.json({ success: true, code: null, message: 'Déjà connecté' });
+      } else if (code) {
         res.json({ success: true, code });
       } else {
         const lastErr = getLastError();

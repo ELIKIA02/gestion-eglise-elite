@@ -137,11 +137,10 @@ export async function initWhatsApp(skipAuthRestore = false) {
         mobile: false,
       });
 
-      sock.ev.on('connection.update', async (update: any) => {
+      sock.ev.on('connection.update', (update: any) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'connecting') {
           status = 'connecting';
-          console.log(`[WA] init #${myInitId} - Status: connecting`);
         }
         if (connection === 'open') {
           status = 'connected';
@@ -149,12 +148,6 @@ export async function initWhatsApp(skipAuthRestore = false) {
           startKeepAlive();
           console.log(`[WA] init #${myInitId} - Connected ✓`);
           setTimeout(() => { fetchGroups().catch(() => {}); }, 10000);
-          // If a pairing code was pending, resolve it
-          if (pendingPairingResolve) {
-            pendingPairingResolve('connected');
-            pendingPairingResolve = null;
-            pendingPairingPhone = null;
-          }
         }
         if (connection === 'close') {
           stopKeepAlive();
@@ -176,28 +169,6 @@ export async function initWhatsApp(skipAuthRestore = false) {
           console.log(`[WA] init #${myInitId} - Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempt})`);
           initPromise = null;
           setTimeout(() => initWhatsApp(true), delay);
-        }
-        // Auto-request pairing code when socket connects to WA (before 408)
-        if (connection === 'connecting' && pendingPairingPhone) {
-          console.log(`[WA] init #${myInitId} - Socket connected to WA, requesting pairing code...`);
-          try {
-            const code = await sock.requestPairingCode(pendingPairingPhone);
-            lastPairingCode = code;
-            console.log(`[WA] init #${myInitId} - Pairing code: ${code}`);
-            if (pendingPairingResolve) {
-              pendingPairingResolve(code);
-              pendingPairingResolve = null;
-              pendingPairingPhone = null;
-            }
-          } catch (err: any) {
-            lastError = err.message;
-            console.error(`[WA] init #${myInitId} - Pairing code error:`, err.message);
-            if (pendingPairingResolve) {
-              pendingPairingResolve(null);
-              pendingPairingResolve = null;
-              pendingPairingPhone = null;
-            }
-          }
         }
       });
 
@@ -337,40 +308,56 @@ export function getLastPairingCode() { return lastPairingCode; }
 export async function requestPairingCode(phoneNumber: string): Promise<string | null> {
   const clean = phoneNumber.replace(/[^0-9]/g, '');
   if (clean.length < 8) { lastError = 'Numéro invalide (minimum 8 chiffres)'; return null; }
-
-  // If already connected, no need
   if (status === 'connected') { lastError = 'Déjà connecté'; return null; }
 
-  // If socket is live and in connecting state, try immediately
-  if (sock && sock?.ws?.readyState === 1 && status === 'connecting') {
+  // If socket is live and WebSocket is open, try immediately
+  if (sock?.ws?.readyState === 1 && (status as string) !== 'connected') {
     try {
       const code = await sock.requestPairingCode(clean);
       lastPairingCode = code;
       return code;
     } catch (err: any) {
-      lastError = err.message;
-      return null;
+      // Socket might have died during request — fall through to re-init
+      console.error('[WA] Pairing code on live socket failed:', err.message);
     }
   }
 
-  // Otherwise: store phone, re-init socket, and wait for the handler to call requestPairingCode
-  pendingPairingPhone = clean;
-  return new Promise<string | null>((resolve) => {
-    pendingPairingResolve = resolve;
-    initPromise = null;
-    // Kill old socket
-    if (sock) { try { sock.end(undefined); } catch {} sock = null; }
-    initWhatsApp(true);
-    // Safety timeout: if no code after 25s, reject
-    setTimeout(() => {
-      if (pendingPairingResolve) {
-        pendingPairingResolve(null);
-        pendingPairingResolve = null;
-        pendingPairingPhone = null;
-        lastError = 'Délai écoulé. Réessaie.';
-      }
-    }, 25000);
-  });
+  // Re-init: kill old socket, create fresh one
+  console.log('[WA] Pairing: creating fresh socket...');
+  initPromise = null;
+  if (sock) { try { sock.end(undefined); } catch {} sock = null; }
+  status = 'disconnected';
+  initWhatsApp(true); // fire-and-forget, we poll for readyState
+
+  // Poll until WebSocket is OPEN (readyState === 1)
+  let wsReady = false;
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 250));
+    if (sock?.ws?.readyState === 1) { wsReady = true; break; }
+  }
+  if (!wsReady) { lastError = 'WebSocket non connecté'; return null; }
+  // Check if already connected (status may have changed during await)
+  if ((status as string) === 'connected') { return 'connected'; }
+
+  // Wait a bit for WA handshake to complete
+  await new Promise(r => setTimeout(r, 2000));
+
+  // Check socket still alive
+  if (sock?.ws?.readyState !== 1) { lastError = 'Socket perdu'; return null; }
+  if ((status as string) === 'connected') { return 'connected'; }
+
+  // Now request the pairing code
+  try {
+    console.log(`[WA] Requesting pairing code for ${clean}...`);
+    const code = await sock.requestPairingCode(clean);
+    lastPairingCode = code;
+    console.log(`[WA] Pairing code: ${code}`);
+    return code;
+  } catch (err: any) {
+    lastError = err.message || 'Erreur inconnue';
+    console.error('[WA] Pairing code error:', err.message);
+    return null;
+  }
 }
 
 export async function sendGroupMessage(groupJid: string, text: string): Promise<boolean> {
