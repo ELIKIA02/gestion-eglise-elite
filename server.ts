@@ -3,9 +3,8 @@ import path from "path";
 import fs from "fs";
 import { Mistral } from "@mistralai/mistralai";
 import dotenv from "dotenv";
-import QRCode from "qrcode";
 import multer from "multer";
-import { initWhatsApp, getStatus, getQR, getLastError, runDiagnostic, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage, requestPairingCode, getLastPairingCode } from "./whatsapp-client";
+import { initWhatsApp, getStatus, getLastError, sendBulk, sendBulkImage, fetchGroups, getGroups, resetGroupsCache, sendGroupMessage, sendGroupImage, cleanup, resetWhatsApp, exportAuthAsBase64, restoreAuthFromBase64, sendMessage, sendDocumentMessage, requestPairingCode, getLastPairingCode } from "./whatsapp-client";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -217,16 +216,7 @@ async function startServer() {
 
   // WhatsApp Baileys endpoints
   app.get("/api/whatsapp/status", (_req, res) => {
-    res.json({ status: getStatus(), qr: getQR(), lastError: getLastError() });
-  });
-
-  app.get("/api/whatsapp/diagnostic", async (_req, res) => {
-    try {
-      const diag = await runDiagnostic();
-      res.json({ success: true, ...diag });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    res.json({ status: getStatus(), lastError: getLastError() });
   });
 
   app.post("/api/whatsapp/send-bulk", async (req, res) => {
@@ -236,7 +226,7 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Destinataires ou message manquants." });
       }
       if (getStatus() !== 'connected') {
-        return res.status(400).json({ success: false, error: "WhatsApp non connecté.", qr: getQR() });
+        return res.status(400).json({ success: false, error: "WhatsApp non connecté." });
       }
       const result = await sendBulk(recipients, text);
       res.json({ success: true, ...result });
@@ -252,7 +242,7 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Destinataires ou image manquants." });
       }
       if (getStatus() !== 'connected') {
-        return res.status(400).json({ success: false, error: "WhatsApp non connecté.", qr: getQR() });
+        return res.status(400).json({ success: false, error: "WhatsApp non connecté." });
       }
       const result = await sendBulkImage(recipients, imageBase64, text || '');
       res.json({ success: true, ...result });
@@ -378,42 +368,14 @@ async function startServer() {
 
   app.post("/api/whatsapp/reset", async (req, _res) => {
     try {
-      const force = req.query?.force === 'true';
-      await resetWhatsApp(force);
-      _res.json({ success: true, message: "WhatsApp réinitialisé. Un nouveau QR va apparaître dans quelques secondes." });
+      await resetWhatsApp();
+      _res.json({ success: true, message: "WhatsApp réinitialisé. Utilisez le code de jumelage pour connecter." });
     } catch (err: any) {
       _res.status(500).json({ success: false, error: err.message });
     }
   });
 
-  app.get("/api/whatsapp/qr-image", async (_req, res) => {
-    try {
-      const qr = getQR();
-      if (!qr) {
-        return res.status(404).json({ error: "Aucun QR disponible" });
-      }
-      const qrDataUrl = await QRCode.toDataURL(qr, { width: 280, margin: 2 });
-      const base64 = qrDataUrl.replace(/^data:image\/png;base64,/, '');
-      const buf = Buffer.from(base64, 'base64');
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Content-Length': buf.length,
-      });
-      res.end(buf);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get("/api/whatsapp/qr-text", (_req, res) => {
-    const qr = getQR();
-    if (!qr) {
-      return res.status(404).json({ error: "Aucun QR disponible" });
-    }
-    res.json({ qr });
-  });
-
-  // Pairing code fallback (more reliable than QR)
+  // Pairing code (remplace le QR)
   app.post("/api/whatsapp/pairing-code", async (req, res) => {
     try {
       const { phone } = req.body;

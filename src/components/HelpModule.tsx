@@ -410,61 +410,65 @@ export default function HelpModule() {
         </button>
         {showWaGuide && (
           <div className="p-5 space-y-6">
-            <ConfigStep number={1} title="Connecter WhatsApp à l'application">
+            <ConfigStep number={1} title="Obtenir le code de jumelage">
               <ul className="list-disc ml-4 space-y-0.5">
                 <li>Va dans <strong>Communications → Messagerie</strong></li>
-                <li>Si un <strong>QR Code</strong> s'affiche, ouvre WhatsApp sur ton téléphone</li>
-                <li>Menu → Appareils liés → <strong>Lier un appareil</strong></li>
-                <li>Scanne le QR code affiché dans l'application</li>
-                <li>La connexion est automatique : le bandeau passe en <span className="text-emerald-600 font-semibold">vert "WhatsApp connecté"</span></li>
+                <li>Entre ton numéro WhatsApp (ex: <strong>+242061234567</strong>) dans le champ</li>
+                <li>Clique <strong>"Obtenir code"</strong></li>
+                <li>Un code à 6 chiffres s'affiche</li>
               </ul>
-              <div className="mt-2 text-xs text-slate-500">
-                💡 Le QR n'apparaît pas ? Clique sur <strong>"QR pas visible ?"</strong> pour voir les logs du serveur.
-              </div>
             </ConfigStep>
 
-            <ConfigStep number={2} title="Envoyer des messages individuels">
+            <ConfigStep number={2} title="Connecter ton téléphone">
+              <ul className="list-disc ml-4 space-y-0.5">
+                <li>Sur ton téléphone, ouvre <strong>WhatsApp</strong></li>
+                <li>Menu (⋮) → <strong>Appareils liés</strong> → <strong>Lier un appareil</strong></li>
+                <li>Choisis <strong>"Connecter via le numéro de téléphone"</strong></li>
+                <li>Tape le code à 6 chiffres</li>
+                <li>Le bandeau passe en <span className="text-emerald-600 font-semibold">vert "WhatsApp connecté"</span></li>
+              </ul>
+            </ConfigStep>
+
+            <ConfigStep number={3} title="Problème ?">
+              <ul className="list-disc ml-4 space-y-0.5">
+                <li>Si le code expire, clique à nouveau sur <strong>"Obtenir code"</strong></li>
+                <li>Sinon clique sur <strong>"Nettoyer session"</strong> puis réessaie</li>
+              </ul>
+            </ConfigStep>
+
+            <ConfigStep number={4} title="Envoyer des messages">
               <ul className="list-disc ml-4 space-y-0.5">
                 <li>Sélectionne un ou plusieurs membres dans la liste</li>
-                <li>Rédige ton message dans l'éditeur (texte simple ou formaté)</li>
-                <li>Utilise les boutons de formatage : <strong>Gras</strong>, <em>Italique</em>, <del>Barré</del></li>
-                <li>Ajoute une image si nécessaire</li>
-                <li>Clique <strong>"Envoyer"</strong> pour envoyer immédiatement</li>
-                <li><span className="text-amber-600 font-semibold">Conseil :</span> utilise le formatage WhatsApp (*texte* pour gras, _texte_ pour italique) pour un rendu correct sur mobile</li>
+                <li>Rédige ton message, ajoute une image si nécessaire</li>
+                <li>Clique <strong>"Envoyer"</strong></li>
+                <li>Utilise le formatage WhatsApp : *gras*, _italique_, ~barré~</li>
               </ul>
             </ConfigStep>
 
-            <ConfigStep number={3} title="Envoyer à un groupe">
+            <ConfigStep number={5} title="Mode groupe WhatsApp">
               <ul className="list-disc ml-4 space-y-0.5">
                 <li>Passe en mode <strong>"Groupe"</strong></li>
-                <li>Sélectionne un groupe WhatsApp dans la liste</li>
-                <li>Rédige ton message et envoie</li>
-                <li>Utilise le bouton <strong>"Rafraîchir"</strong> si un nouveau groupe n'apparaît pas</li>
+                <li>Sélectionne un groupe et envoie</li>
               </ul>
             </ConfigStep>
 
-            <ConfigStep number={4} title="Programmer des messages">
+            <ConfigStep number={6} title="Programmer un message">
               <ul className="list-disc ml-4 space-y-0.5">
-                <li>Coche <strong>"Programmer"</strong></li>
-                <li>Choisis la date et l'heure d'envoi</li>
-                <li>Clique <strong>"Programmer"</strong></li>
-                <li>Le message sera envoyé automatiquement à la date choisie</li>
-                <li>Les messages programmés apparaissent dans la section "Messages programmés" en bas</li>
+                <li>Coche <strong>"Programmer"</strong>, choisis date/heure, clique <strong>"Programmer"</strong></li>
               </ul>
             </ConfigStep>
 
-            <ConfigStep number={5} title="Mode déconnecté (liens wa.me)">
+            <ConfigStep number={7} title="Mode wa.me (si déconnecté)">
               <ul className="list-disc ml-4 space-y-0.5">
                 <li>Si WhatsApp n'est pas connecté, les messages sont envoyés sous forme de <strong>liens wa.me</strong></li>
-                <li>Chaque destinataire reçoit un lien cliquable qui ouvre WhatsApp avec le message pré-rempli</li>
-                <li>Les images ne peuvent pas être envoyées en mode déconnecté</li>
-                <li>Pour utiliser l'envoi automatique, connecte-toi via le QR Code</li>
+                <li>Chaque destinataire reçoit un lien cliquable qui ouvre WhatsApp</li>
+                <li>Les images ne sont pas supportées en mode wa.me</li>
               </ul>
             </ConfigStep>
 
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
               <p className="font-semibold mb-1">⚠️ Point important :</p>
-              <p>La session WhatsApp peut expirer après quelques jours. Si le bandeau devient rouge, reconnecte-toi en scannant un nouveau QR Code depuis <strong>Communications → Messagerie</strong>. Tu peux exporter la session (<strong>"Exporter session WhatsApp"</strong>) pour sauvegarder l'authentification.</p>
+              <p>La session WhatsApp peut expirer après quelques jours. Si le bandeau devient rouge, reconnecte-toi avec un nouveau code de jumelage depuis <strong>Communications → Messagerie</strong>.</p>
             </div>
           </div>
         )}

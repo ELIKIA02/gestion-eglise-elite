@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { collection, addDoc, db, handleFirestoreError, OperationType } from '../firebase';
 import { CommunicationLog, Member, Department, ChurchSettings } from '../types';
-import { Send, Users, HelpCircle, Smartphone, Loader2, CheckCircle2, XCircle, QrCode, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, Download, FileText, Vote, Globe, ArrowUp, ArrowDown, Bold, Italic, Strikethrough } from 'lucide-react';
+import { Send, Users, HelpCircle, Smartphone, Loader2, CheckCircle2, XCircle, AlertTriangle, CalendarClock, Trash2, Image, X, Pin, PinOff, FileText, Vote, Globe, ArrowUp, ArrowDown, Bold, Italic, Strikethrough } from 'lucide-react';
 import PollsModule from './PollsModule';
 import RichTextEditor, { formatForFacebook } from './RichTextEditor';
 
@@ -79,17 +79,8 @@ export default function CommunicationsModule({ comms, members, departments, sett
   const [pinnedGroups, setPinnedGroups] = useState<string[]>([]);
 
 const [waStatus, setWaStatus] = useState<string>('checking');
-const [waQR, setWaQR] = useState<string | null>(null);
 const [sentLinks, setSentLinks] = useState<{ name: string; phone: string; url: string }[]>([]);
-  const [resetting, setResetting] = useState(false);
-  const [forcingQR, setForcingQR] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
-  const [showDiag, setShowDiag] = useState(false);
-const [diagData, setDiagData] = useState<any>(null);
-const [diagLoading, setDiagLoading] = useState(false);
-const [lastError, setLastError] = useState<string | null>(null);
-const [qrVersion, setQrVersion] = useState(0);
-const [exportedAuth, setExportedAuth] = useState<string | null>(null);
+const [cleaning, setCleaning] = useState(false);
 const [pairingPhone, setPairingPhone] = useState('');
 const [pairingCode, setPairingCode] = useState<string | null>(null);
 const [pairingSending, setPairingSending] = useState(false);
@@ -114,53 +105,18 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const [fbWaSending, setFbWaSending] = useState(false);
   const fbImageInputRef = useRef<HTMLInputElement>(null);
 
-  // Bump QR version when new QR arrives to force image refresh
-  useEffect(() => {
-    if (waQR) {
-      setQrVersion(v => v + 1);
-    }
-  }, [waQR]);
-
   useEffect(() => {
     const poll = async () => {
       try {
         const res = await fetch('/api/whatsapp/status');
         const data = await res.json();
         setWaStatus(data.status);
-        setWaQR(data.qr || null);
-        setLastError(data.lastError || null);
       } catch { setWaStatus('unreachable'); }
     };
     poll();
     pollRef.current = setInterval(poll, 2000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
-
-  const handleReset = async () => {
-    setResetting(true);
-    try {
-      const res = await fetch('/api/whatsapp/reset', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setWaStatus('connecting');
-        setWaQR(null);
-      }
-    } catch (e) { console.error('[Comms] WhatsApp reset failed:', e); }
-    setTimeout(() => setResetting(false), 3000);
-  };
-
-  const handleForceQR = async () => {
-    setForcingQR(true);
-    try {
-      const res = await fetch('/api/whatsapp/reset?force=true', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setWaStatus('connecting');
-        setWaQR(null);
-      }
-    } catch (e) { console.error('[Comms] Force QR failed:', e); }
-    setTimeout(() => setForcingQR(false), 3000);
-  };
 
   const handleCleanAuth = async () => {
     setCleaning(true);
@@ -169,34 +125,9 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       const data = await res.json();
       if (data.success) {
         setWaStatus('connecting');
-        setWaQR(null);
       }
     } catch (e) { console.error('[Comms] Clean auth failed:', e); }
     setTimeout(() => setCleaning(false), 3000);
-  };
-
-  const handleExportAuth = async () => {
-    try {
-      const res = await fetch('/api/whatsapp/export-auth');
-      const data = await res.json();
-      if (data.success) {
-        setExportedAuth(data.data);
-      } else {
-        alert("Aucune session WhatsApp à exporter. Connectez-vous d'abord.");
-      }
-    } catch {
-      alert("Erreur lors de l'export");
-    }
-  };
-
-  const copyAuthToClipboard = () => {
-    if (exportedAuth) {
-      navigator.clipboard.writeText(exportedAuth).then(() => {
-        alert("Données copiées ! Ajoutez-les comme WA_AUTH_DATA sur Render.");
-      }).catch(() => {
-        alert("Copie manuelle : sélectionnez et copiez le texte ci-dessous.");
-      });
-    }
   };
 
   const handleRequestPairingCode = async () => {
@@ -531,10 +462,10 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
   const statusLabel = (s: string) => {
     switch (s) {
       case 'connected': return 'WhatsApp connecté ✓ — envoi automatique disponible';
-      case 'connecting': return 'Connexion WhatsApp en cours... Si le QR n\'apparaît pas dans 30s, cliquez sur "Forcer QR"';
+      case 'connecting': return 'Connexion en cours... Préparez le code de jumelage';
       case 'checking': return 'Vérification...';
       case 'unreachable': return 'Serveur indisponible — le backend est-il lancé ?';
-      default: return 'WhatsApp déconnecté — cliquez sur "Forcer QR" pour scanner';
+      default: return 'WhatsApp déconnecté — utilisez le code de jumelage ci-dessous';
     }
   };
 
@@ -731,52 +662,22 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
       }`}>
         {statusIcon(waStatus)}
         <span className="font-medium flex-1">{statusLabel(waStatus)}</span>
-        {waStatus === 'connected' ? (
-          <button onClick={handleExportAuth}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-emerald-300 text-emerald-800 font-semibold text-[10px] cursor-pointer">
-            <Download className="w-3 h-3" />
-            Exporter session
-          </button>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <button onClick={handleReset} disabled={resetting}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
-              <Loader2 className={`w-3 h-3 ${resetting ? 'animate-spin' : ''}`} />
-              {resetting ? 'Réinitialisation...' : 'Redémarrer'}
-            </button>
-            <button onClick={handleForceQR} disabled={forcingQR}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
-              <QrCode className="w-3 h-3" />
-              {forcingQR ? 'Forçage...' : 'Forcer QR'}
-            </button>
-          </div>
-        )}
+        <button onClick={handleCleanAuth} disabled={cleaning}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/70 hover:bg-white border border-current text-current font-semibold text-[10px] disabled:opacity-50 cursor-pointer">
+          <Trash2 className="w-3 h-3" />
+          {cleaning ? 'Nettoyage...' : 'Nettoyer session'}
+        </button>
       </div>
 
-      {waQR && (
-        <div className="bg-white rounded-xl border border-amber-200 p-5 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
-            <QrCode className="w-5 h-5" /> Scannez ce QR code avec WhatsApp
-          </div>
-          <img key={qrVersion} src={`/api/whatsapp/qr-image?t=${Date.now()}`} alt="QR Code WhatsApp" onError={() => {}} className="border-2 border-slate-100 rounded-lg" />
-          <p className="text-[10px] text-slate-400">WhatsApp → Paramètres → Appareils connectés → Connecter un appareil</p>
-          <details className="w-full">
-            <summary className="text-[10px] text-slate-400 cursor-pointer hover:text-slate-600 text-center">QR pas visible ? Voir dans les logs Render</summary>
-            <p className="text-[10px] text-slate-400 mt-2 text-center">
-              Ouvrez les <strong>Logs</strong> de votre service Render, cherchez <code className="bg-slate-100 px-1 rounded">[WA] QR code generated</code>.<br />
-              Le QR apparaît aussi en ASCII dans les logs (scannez-le directement depuis le terminal).
-            </p>
-          </details>
-        </div>
-      )}
-
-      {/* Pairing code fallback — visible même sans QR */}
+      {/* Pairing code — méthode principale */}
       {waStatus !== 'connected' && waStatus !== 'checking' && (
         <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
           <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
-            <Smartphone className="w-5 h-5 text-indigo-600" /> Code de jumelage (alternative au QR)
+            <Smartphone className="w-5 h-5 text-indigo-600" /> Connexion par code de jumelage
           </div>
-          <p className="text-[10px] text-slate-500">Si le QR ne fonctionne pas, entre ton <strong>numéro WhatsApp</strong> pour obtenir un code à taper dans WhatsApp.</p>
+          <p className="text-[10px] text-slate-500">
+            Entre ton <strong>numéro WhatsApp</strong> (indicatif pays inclus, ex: +242061234567) pour obtenir un code à taper dans WhatsApp.
+          </p>
           <div className="flex gap-2">
             <input type="tel" value={pairingPhone} onChange={e => setPairingPhone(e.target.value)}
               placeholder="+242 XX XXX XXXX"
@@ -793,61 +694,6 @@ const [commsSubTab, setCommsSubTab] = useState<'messagerie' | 'sondages' | 'face
               <p className="text-[9px] text-slate-500">WhatsApp → Appareils liés → Lier un appareil → <strong>Connecter via le numéro de téléphone</strong></p>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Diagnostic button */}
-      <div className="flex justify-end">
-        <button onClick={async () => {
-          setShowDiag(!showDiag);
-          if (!showDiag) {
-            setDiagLoading(true);
-            try {
-              const r = await fetch('/api/whatsapp/diagnostic');
-              setDiagData(await r.json());
-            } catch { setDiagData({ error: 'Serveur injoignable' }); }
-            setDiagLoading(false);
-          }
-        }} className="text-[10px] text-slate-400 hover:text-slate-600 cursor-pointer underline">
-          Diagnostic connexion
-        </button>
-      </div>
-
-      {showDiag && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-1.5 text-[10px] font-mono">
-          <div className="text-xs font-bold text-slate-700 mb-1">Diagnostic WhatsApp</div>
-          {diagLoading ? <div className="text-slate-400">Analyse en cours...</div> : diagData ? (
-            <>
-              <div><span className="text-slate-500">DNS web.whatsapp.com:</span> <span className={diagData.dns?.startsWith('FAIL') ? 'text-red-600' : 'text-emerald-600'}>{diagData.dns || '—'}</span></div>
-              <div><span className="text-slate-500">TCP 443:</span> <span className={diagData.tcp?.startsWith('FAIL') ? 'text-red-600' : 'text-emerald-600'}>{diagData.tcp || '—'}</span></div>
-              <div><span className="text-slate-500">Dossier auth:</span> <span className="text-slate-700">{diagData.authDir} ({diagData.authFiles?.length || 0} fichiers)</span></div>
-              <div><span className="text-slate-500">Baileys:</span> <span className="text-slate-700">{diagData.baileysVersion}</span></div>
-              <div><span className="text-slate-500">Dernière erreur:</span> <span className="text-red-600">{lastError || 'aucune'}</span></div>
-            </>
-          ) : <div className="text-slate-400">Cliquez pour lancer</div>}
-        </div>
-      )}
-
-      {exportedAuth && (
-        <div className="bg-white rounded-xl border border-emerald-200 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
-              <Download className="w-5 h-5" /> Session WhatsApp exportée
-            </div>
-<button onClick={() => setExportedAuth(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="Fermer">
-               <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-[11px] text-slate-600">
-            Copiez cette chaîne et ajoutez-la comme variable d'environnement <strong>WA_AUTH_DATA</strong> sur Render.
-            Après redéploiement, WhatsApp sera automatiquement connecté.
-          </p>
-          <textarea readOnly value={exportedAuth} rows={4}
-            className="w-full text-[10px] p-2 border border-slate-200 rounded-md bg-slate-50 font-mono break-all" />
-          <button onClick={copyAuthToClipboard}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer">
-            Copier dans le presse-papier
-          </button>
         </div>
       )}
 
