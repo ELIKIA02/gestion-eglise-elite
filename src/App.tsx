@@ -379,7 +379,7 @@ export default function App() {
 
       {/* Main */}
       <main className={`flex-1 min-h-0 ${isMobile ? 'flex flex-col' : ''}`}>
-        <div className={`flex-1 overflow-y-auto p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 ${isMobile ? 'pb-4' : ''}`}>
+        <div className={`flex-1 overflow-y-auto p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 ${isMobile ? 'pb-[72px]' : ''}`}>
           <div className={`p-6 md:p-8 rounded-xl border min-h-[500px] transition-colors duration-300 ${
             theme === 'dark' ? 'bg-slate-800 border-slate-700 shadow-md' : 'bg-white border-slate-200 shadow-md shadow-slate-100/40'
           }`}>
@@ -449,7 +449,7 @@ export default function App() {
         {/* Mobile bottom tab bar */}
         {isMobile && (
           <>
-            <div className="shrink-0 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 pb-safe min-h-[56px] shadow-lg shadow-black/20">
+            <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#0F172A] border-t border-slate-800 flex items-center justify-around px-1 pb-safe min-h-[56px] shadow-lg shadow-black/20">
               {MAIN_TABS.map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -488,37 +488,35 @@ export default function App() {
                 </button>
 
                 {showMoreMenu && (
-                  <div className="absolute bottom-full mb-2 right-0 bg-[#0F172A] border border-slate-800 rounded-xl p-2 shadow-2xl min-w-[200px]">
-                    {MORE_TABS.map(link => {
-                      const Icon = link.icon;
-                      const a = activeTab === link.id;
-                      return (
-                        <button key={link.id}
-                          onClick={() => { setActiveTab(link.id); setShowMoreMenu(false); }}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all min-h-[44px] ${
-                            a ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                          }`}
-                          style={{ touchAction: 'manipulation' }}
-                        >
-                          <Icon className={`w-4 h-4 ${a ? 'text-indigo-200' : 'text-slate-400'}`} />
-                          <span>{link.label}</span>
-                          {link.count !== undefined && (
-                            <span className="ml-auto text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-slate-800 text-slate-400">
-                              {link.count}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowMoreMenu(false)} />
+                    <div className="absolute bottom-full mb-2 right-0 z-50 bg-[#0F172A] border border-slate-800 rounded-xl p-2 shadow-2xl min-w-[200px]">
+                      {MORE_TABS.map(link => {
+                        const Icon = link.icon;
+                        const a = activeTab === link.id;
+                        return (
+                          <button key={link.id}
+                            onClick={() => { setActiveTab(link.id); setShowMoreMenu(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all min-h-[44px] ${
+                              a ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                            style={{ touchAction: 'manipulation' }}
+                          >
+                            <Icon className={`w-4 h-4 ${a ? 'text-indigo-200' : 'text-slate-400'}`} />
+                            <span>{link.label}</span>
+                            {link.count !== undefined && (
+                              <span className="ml-auto text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-slate-800 text-slate-400">
+                                {link.count}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-
-            {/* Overlay */}
-            {showMoreMenu && (
-              <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowMoreMenu(false)} />
-            )}
           </>
         )}
       </main>
